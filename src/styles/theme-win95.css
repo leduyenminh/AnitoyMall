@@ -1,0 +1,616 @@
+/*
+ * Windows 95: teal desktop, silver windows with bevelled edges, navy title bars, a taskbar with
+ * a working Start menu. Everything is square and instant (no transitions).
+ */
+
+[data-theme="win95"] body {
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  padding-bottom: 38px; /* taskbar */
+  cursor: default;
+}
+
+[data-theme="win95"] h1,
+[data-theme="win95"] h2,
+[data-theme="win95"] h3 {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+[data-theme="win95"] ::selection {
+  background: #000080;
+  color: #fff;
+}
+
+[data-theme="win95"] input[type="radio"],
+[data-theme="win95"] input[type="checkbox"] {
+  accent-color: #000;
+}
+[data-theme="win95"] .hero__hearts {
+  color: #ff0000;
+}
+
+[data-theme="win95"] :focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+/* ---------- Windows ---------- */
+[data-theme="win95"] .window,
+[data-theme="win95"] .card,
+[data-theme="win95"] .product-card,
+[data-theme="win95"] .catalog__filters,
+[data-theme="win95"] .faq__item,
+[data-theme="win95"] .popover,
+[data-theme="win95"] .consent,
+[data-theme="win95"] .collection-card,
+[data-theme="win95"] .hero__copy,
+[data-theme="win95"] .mobile-nav__panel {
+  background: #c0c0c0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--bevel-out);
+  padding: 3px;
+}
+
+[data-theme="win95"] .window__titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 20px;
+  padding: 2px 3px 2px 4px;
+  background: var(--titlebar);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+[data-theme="win95"] .window__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-theme="win95"] .window__title::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: -2px;
+  background: linear-gradient(135deg, #ff0000 0 50%, #00a000 50%), #fff;
+  box-shadow: 6px 0 0 -1px #0000ff inset;
+}
+[data-theme="win95"] .window__controls {
+  display: flex;
+  gap: 2px;
+  flex: none;
+}
+[data-theme="win95"] .window__controls span {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 14px;
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  color: #000;
+  font-size: 10px;
+  line-height: 1;
+}
+[data-theme="win95"] .window__controls span:nth-child(1)::before {
+  content: "_";
+  margin-top: -6px;
+}
+[data-theme="win95"] .window__controls span:nth-child(2)::before {
+  content: "□";
+}
+[data-theme="win95"] .window__controls span:nth-child(3) {
+  margin-left: 2px;
+}
+[data-theme="win95"] .window__controls span:nth-child(3)::before {
+  content: "×";
+  font-weight: 700;
+  font-size: 12px;
+}
+
+[data-theme="win95"] .card__body {
+  padding: 12px;
+}
+
+/* ---------- Text that sits directly on the teal desktop ---------- */
+[data-theme="win95"] .page__head,
+[data-theme="win95"] .section__head,
+[data-theme="win95"] .breadcrumbs,
+[data-theme="win95"] .catalog__toolbar,
+[data-theme="win95"] .pdp > .section > .section__title,
+[data-theme="win95"] .hero__proof {
+  color: #fff;
+}
+[data-theme="win95"] .page__head .muted,
+[data-theme="win95"] .section__head .muted,
+[data-theme="win95"] .catalog__toolbar .muted,
+[data-theme="win95"] .breadcrumbs ol {
+  color: #e8e8e8;
+}
+[data-theme="win95"] .section__link {
+  color: #ffff00;
+}
+[data-theme="win95"] .section--tint {
+  background: transparent;
+}
+[data-theme="win95"] .hero__copy {
+  padding: 16px 18px;
+}
+[data-theme="win95"] .hero__copy .eyebrow,
+[data-theme="win95"] .eyebrow {
+  color: #000080;
+}
+[data-theme="win95"] .hero__proof {
+  color: #000;
+}
+[data-theme="win95"] .hero__title {
+  font-size: clamp(1.8rem, 1.2rem + 2.4vw, 2.6rem);
+}
+
+/* ---------- Header as an application window ---------- */
+[data-theme="win95"] .site-header {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  padding: 2px;
+  border: 0;
+}
+[data-theme="win95"] .site-header__inner {
+  min-height: 48px;
+  max-width: none;
+}
+[data-theme="win95"] .site-nav__link {
+  border-radius: 0;
+  padding: 4px 8px;
+}
+[data-theme="win95"] .site-nav__link::first-letter {
+  text-decoration: underline;
+}
+[data-theme="win95"] .site-nav__link:hover {
+  background: #000080;
+  color: #fff;
+}
+[data-theme="win95"] .site-search {
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--bevel-field);
+  height: 30px;
+  color: #000;
+}
+[data-theme="win95"] .logo__big {
+  text-shadow: none;
+  font-size: 18px;
+}
+[data-theme="win95"] .logo__small {
+  color: #000;
+}
+[data-theme="win95"] .logo__mark {
+  width: 28px;
+  height: 28px;
+}
+
+/* ---------- Controls ---------- */
+[data-theme="win95"] .btn,
+[data-theme="win95"] .icon-btn,
+[data-theme="win95"] .chip,
+[data-theme="win95"] .qty__btn,
+[data-theme="win95"] .lang-switch,
+[data-theme="win95"] .taskbar__start,
+[data-theme="win95"] .taskbar__task {
+  background: #c0c0c0;
+  color: #000;
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--bevel-out);
+  font-weight: 400;
+  transform: none;
+  text-shadow: none;
+}
+[data-theme="win95"] .btn {
+  min-height: 34px;
+  padding: 4px 14px;
+}
+[data-theme="win95"] .btn--lg {
+  min-height: 40px;
+}
+[data-theme="win95"] .btn--primary {
+  font-weight: 700;
+  outline: 1px solid #000;
+  outline-offset: -1px;
+}
+[data-theme="win95"] .btn:active,
+[data-theme="win95"] .icon-btn:active,
+[data-theme="win95"] .qty__btn:active,
+[data-theme="win95"] .chip.is-active,
+[data-theme="win95"] .taskbar__start:active,
+[data-theme="win95"] .taskbar__task:active {
+  box-shadow: var(--bevel-in);
+  padding-top: 5px;
+}
+[data-theme="win95"] .btn:hover,
+[data-theme="win95"] .icon-btn:hover {
+  background: #c0c0c0;
+}
+[data-theme="win95"] .btn:disabled {
+  color: #808080;
+  text-shadow: 1px 1px 0 #fff;
+  opacity: 1;
+}
+[data-theme="win95"] .icon-btn {
+  width: 34px;
+  height: 34px;
+}
+[data-theme="win95"] .icon-btn--primary {
+  font-weight: 700;
+}
+[data-theme="win95"] .cart-button__count {
+  border-radius: 0;
+  background: #ff0000;
+  color: #fff;
+}
+[data-theme="win95"] .chip.is-active {
+  background: #dfdfdf;
+  color: #000;
+}
+
+[data-theme="win95"] .input,
+[data-theme="win95"] .select,
+[data-theme="win95"] .textarea,
+[data-theme="win95"] .qty {
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--bevel-field);
+  min-height: 30px;
+}
+[data-theme="win95"] .input:focus,
+[data-theme="win95"] .select:focus,
+[data-theme="win95"] .textarea:focus {
+  box-shadow: var(--bevel-field);
+}
+[data-theme="win95"] .qty {
+  background: #c0c0c0;
+  padding: 2px;
+}
+[data-theme="win95"] .qty__btn {
+  width: 28px;
+  height: 28px;
+}
+[data-theme="win95"] .qty__input {
+  background: #fff;
+  height: 28px;
+}
+
+[data-theme="win95"] .option span,
+[data-theme="win95"] .pay-option {
+  border: 0;
+  border-radius: 0;
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+}
+[data-theme="win95"] .option input:checked + span,
+[data-theme="win95"] .pay-option:has(input:checked) {
+  box-shadow: var(--bevel-in);
+  color: #000;
+  background: #dfdfdf;
+}
+
+[data-theme="win95"] .badge {
+  border-radius: 0;
+  font-weight: 400;
+}
+[data-theme="win95"] .badge--low {
+  background: #ffff00;
+  color: #000;
+}
+[data-theme="win95"] .badge--out {
+  background: #808080;
+  color: #fff;
+  border: 0;
+}
+
+[data-theme="win95"] .price__now {
+  color: #000080;
+}
+[data-theme="win95"] .totals__grand dd {
+  color: #000080;
+}
+
+/* ---------- Product cards ---------- */
+[data-theme="win95"] .product-card:hover {
+  transform: none;
+  box-shadow: var(--bevel-out);
+}
+[data-theme="win95"] .product-card__media,
+[data-theme="win95"] .pdp-gallery__frame,
+[data-theme="win95"] .hero__art-frame,
+[data-theme="win95"] .collection-card__art,
+[data-theme="win95"] .cart-line__media,
+[data-theme="win95"] .summary-line__media,
+[data-theme="win95"] .pay-qr__image {
+  background: #fff;
+  box-shadow: var(--bevel-field);
+  border-radius: 0;
+  margin: 3px;
+}
+[data-theme="win95"] .product-card__meta {
+  color: #000080;
+}
+[data-theme="win95"] .pdp-gallery__main,
+[data-theme="win95"] .hero__art,
+[data-theme="win95"] .about__art {
+  border-radius: 0;
+  border: 0;
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  padding: 3px;
+}
+[data-theme="win95"] .pdp-gallery__thumb {
+  border-radius: 0;
+  box-shadow: var(--bevel-out);
+  border: 0;
+}
+[data-theme="win95"] .pdp-gallery__thumb.is-active {
+  box-shadow: var(--bevel-in);
+}
+[data-theme="win95"] .pdp-buy {
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  padding: 14px;
+}
+[data-theme="win95"] .perks {
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: var(--bevel-field);
+}
+[data-theme="win95"] .perks svg,
+[data-theme="win95"] .perks-strip__list svg {
+  color: #000080;
+}
+[data-theme="win95"] .perks-strip {
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  border: 0;
+}
+[data-theme="win95"] .collection-card {
+  background: #c0c0c0;
+}
+[data-theme="win95"] .collection-card:hover {
+  transform: none;
+}
+
+/* ---------- Progress, timeline, dialogs ---------- */
+[data-theme="win95"] .ship-meter {
+  background: transparent;
+  border-radius: 0;
+  padding: 6px 0;
+}
+[data-theme="win95"] .ship-meter__track {
+  height: 18px;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: var(--bevel-field);
+  padding: 3px;
+}
+[data-theme="win95"] .ship-meter__fill {
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, #000080 0 9px, transparent 9px 11px);
+}
+[data-theme="win95"] .timeline__dot {
+  border-radius: 0;
+  box-shadow: var(--bevel-out);
+  border: 0;
+  background: #c0c0c0;
+}
+[data-theme="win95"] .is-done .timeline__dot {
+  background: #000080;
+}
+[data-theme="win95"] .timeline li.is-done::before {
+  background: #000080;
+}
+
+[data-theme="win95"] .drawer {
+  margin: auto 0 38px auto;
+  height: calc(100dvh - 60px);
+  max-height: calc(100dvh - 60px);
+  box-shadow: var(--bevel-out);
+  padding: 3px;
+}
+[data-theme="win95"] .drawer[open] {
+  animation: none;
+}
+[data-theme="win95"] .drawer::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+[data-theme="win95"] .drawer__inner {
+  background: #c0c0c0;
+}
+[data-theme="win95"] .drawer .cart-lines {
+  background: #fff;
+  box-shadow: var(--bevel-field);
+  padding: 0 8px;
+}
+[data-theme="win95"] .popover {
+  inset: 60px 16px auto auto;
+}
+
+[data-theme="win95"] .site-footer {
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  border: 0;
+}
+[data-theme="win95"] .site-footer ul a {
+  color: #000080;
+  text-decoration: underline;
+}
+[data-theme="win95"] .faq__a {
+  color: #000;
+}
+
+[data-theme="win95"] .sticky-buy {
+  bottom: 36px;
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  backdrop-filter: none;
+  border: 0;
+}
+
+[data-theme="win95"] .tiktok-video__facade,
+[data-theme="win95"] .tiktok-video__frame {
+  border-radius: 0;
+}
+[data-theme="win95"] .tiktok-video__play {
+  border-radius: 0;
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+}
+[data-theme="win95"] .tiktok-video__link {
+  color: #000;
+}
+
+[data-theme="win95"] .alert {
+  border-radius: 0;
+  background: #fff;
+  box-shadow: var(--bevel-field);
+  border: 0;
+}
+[data-theme="win95"] code {
+  border-radius: 0;
+  background: #fff;
+}
+[data-theme="win95"] .table {
+  background: #fff;
+}
+
+/* ---------- Taskbar & Start menu ---------- */
+[data-theme="win95"] .taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 3px 4px;
+  background: #c0c0c0;
+  box-shadow: inset 0 1px #dfdfdf, inset 0 2px #fff;
+}
+[data-theme="win95"] .taskbar__start {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 2px 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+[data-theme="win95"] .taskbar__flag {
+  width: 18px;
+  height: 16px;
+  background:
+    linear-gradient(#ff0000, #ff0000) 0 0 / 8px 7px no-repeat,
+    linear-gradient(#00a000, #00a000) 9px 0 / 8px 7px no-repeat,
+    linear-gradient(#0000ff, #0000ff) 0 8px / 8px 7px no-repeat,
+    linear-gradient(#ffff00, #ffff00) 9px 8px / 8px 7px no-repeat;
+  transform: skewY(-6deg);
+}
+[data-theme="win95"] .taskbar__task {
+  height: 28px;
+  min-width: 140px;
+  padding: 2px 8px;
+  text-align: left;
+  box-shadow: var(--bevel-in);
+  background: repeating-conic-gradient(#c0c0c0 0 25%, #dfdfdf 0 50%) 0 0 / 2px 2px;
+  cursor: pointer;
+}
+[data-theme="win95"] .taskbar__tray {
+  margin-left: auto;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  box-shadow: inset -1px -1px #fff, inset 1px 1px #808080;
+}
+[data-theme="win95"] .start-menu:popover-open {
+  position: fixed;
+  inset: auto auto 36px 2px;
+  margin: 0;
+  display: flex;
+  width: 250px;
+  padding: 3px;
+  border: 0;
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  color: #000;
+}
+[data-theme="win95"] .start-menu__rail {
+  display: flex;
+  align-items: flex-end;
+  width: 28px;
+  background: linear-gradient(0deg, #000080, #1084d0);
+  color: #c0c0c0;
+}
+[data-theme="win95"] .start-menu__rail span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 8px 4px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+[data-theme="win95"] .start-menu__rail b {
+  color: #fff;
+}
+[data-theme="win95"] .start-menu__items {
+  flex: 1;
+  display: grid;
+  padding: 2px;
+}
+[data-theme="win95"] .start-menu__heading {
+  margin: 4px 6px 2px;
+  font-size: 11px;
+  color: #808080;
+}
+[data-theme="win95"] .start-menu__item,
+[data-theme="win95"] .theme-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 0;
+  text-decoration: none;
+  color: #000;
+  font-weight: 400;
+}
+[data-theme="win95"] .start-menu__item:hover,
+[data-theme="win95"] .theme-option:hover {
+  background: #000080;
+  color: #fff;
+}
+[data-theme="win95"] .start-menu hr {
+  border-top: 1px solid #808080;
+  border-bottom: 1px solid #fff;
+  margin: 4px 2px;
+}
+
+/* ---------- Win95 scrollbars ---------- */
+[data-theme="win95"] ::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+  background: repeating-conic-gradient(#c0c0c0 0 25%, #fff 0 50%) 0 0 / 2px 2px;
+}
+[data-theme="win95"] ::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+}

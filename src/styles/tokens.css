@@ -1,0 +1,198 @@
+/*
+ * Design tokens for the four themes. Components only reference these variables; the Windows 95
+ * and Frutiger Aero themes additionally restyle component structure in their own files.
+ * The active theme is set on <html data-theme="..."> before first paint.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --font-body: var(--font-body-loaded), "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-display-loaded), var(--font-body);
+  --font-size: 15px;
+
+  --bg: #fffafc;
+  --bg-image:
+    radial-gradient(1100px 520px at 0% -8%, #ffe2ec 0%, transparent 62%),
+    radial-gradient(900px 480px at 105% 4%, #dafcfb 0%, transparent 58%);
+  --surface: #ffffff;
+  --surface-2: #fff0f4;
+  --surface-sunken: #f5f5f8;
+  --text: #161823;
+  --text-muted: #5d6070;
+  --border: #ececf2;
+  --border-strong: #d4d4de;
+
+  --primary: #fe2c55;
+  --primary-hover: #e3173f;
+  --primary-text: #ffffff;
+  --secondary: #161823;
+  --secondary-hover: #2a2c3a;
+  --secondary-text: #ffffff;
+  --accent-2: #25f4ee;
+  --tiktok-bg: #161823;
+  --tiktok-text: #ffffff;
+
+  --success: #11845b;
+  --warning: #b45309;
+  --danger: #d92d20;
+  --sale: #fe2c55;
+  --badge-bg: #161823;
+  --badge-text: #ffffff;
+
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 26px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgb(22 24 35 / 6%);
+  --shadow: 0 8px 28px -12px rgb(22 24 35 / 22%);
+  --shadow-lg: 0 28px 70px -24px rgb(22 24 35 / 38%);
+  --focus-ring: 0 0 0 3px rgb(254 44 85 / 35%);
+
+  --header-bg: rgb(255 250 252 / 82%);
+  --header-border: rgb(22 24 35 / 6%);
+  --logo-bg: #161823;
+  --transition: 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0b0f;
+  --bg-image:
+    radial-gradient(1000px 520px at -5% -10%, rgb(254 44 85 / 17%) 0%, transparent 60%),
+    radial-gradient(860px 480px at 108% 0%, rgb(37 244 238 / 12%) 0%, transparent 56%);
+  --surface: #15151c;
+  --surface-2: #1c1c25;
+  --surface-sunken: #101016;
+  --text: #f3f3f6;
+  --text-muted: #a4a4b4;
+  --border: #272733;
+  --border-strong: #3a3a49;
+
+  --primary: #fe2c55;
+  --primary-hover: #ff4f73;
+  --secondary: #f3f3f6;
+  --secondary-hover: #ffffff;
+  --secondary-text: #0b0b0f;
+  --tiktok-bg: #ffffff;
+  --tiktok-text: #0b0b0f;
+
+  --success: #3dd598;
+  --warning: #f5a524;
+  --danger: #ff6b5e;
+  --badge-bg: #f3f3f6;
+  --badge-text: #0b0b0f;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow: 0 10px 30px -12px rgb(0 0 0 / 70%);
+  --shadow-lg: 0 30px 80px -24px rgb(0 0 0 / 85%);
+  --focus-ring: 0 0 0 3px rgb(37 244 238 / 45%);
+  --header-bg: rgb(11 11 15 / 78%);
+  --header-border: rgb(255 255 255 / 7%);
+  --logo-bg: #fe2c55;
+}
+
+[data-theme="win95"] {
+  color-scheme: light;
+  --font-body: "MS Sans Serif", "Microsoft Sans Serif", "Pixelated MS Sans Serif", Tahoma, Geneva, Verdana, sans-serif;
+  --font-display: var(--font-body);
+  --font-size: 13px;
+
+  --bg: #008080;
+  --bg-image: none;
+  --surface: #c0c0c0;
+  --surface-2: #c0c0c0;
+  --surface-sunken: #ffffff;
+  --text: #000000;
+  --text-muted: #3a3a3a;
+  --border: #808080;
+  --border-strong: #000000;
+
+  --primary: #c0c0c0;
+  --primary-hover: #c0c0c0;
+  --primary-text: #000000;
+  --secondary: #c0c0c0;
+  --secondary-hover: #c0c0c0;
+  --secondary-text: #000000;
+  --tiktok-bg: #c0c0c0;
+  --tiktok-text: #000000;
+  --accent-2: #000080;
+
+  --success: #008000;
+  --warning: #808000;
+  --danger: #ff0000;
+  --sale: #ff0000;
+  --badge-bg: #000080;
+  --badge-text: #ffffff;
+
+  --radius-sm: 0;
+  --radius: 0;
+  --radius-lg: 0;
+  --radius-pill: 0;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-lg: none;
+  --focus-ring: none;
+  --header-bg: #c0c0c0;
+  --header-border: transparent;
+  --logo-bg: #000080;
+  --transition: 0s;
+
+  /* Classic 3D bevels */
+  --bevel-out: inset -1px -1px #0a0a0a, inset 1px 1px #ffffff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  --bevel-in: inset -1px -1px #ffffff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080;
+  --bevel-field: inset -1px -1px #ffffff, inset 1px 1px #808080, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a;
+  --titlebar: linear-gradient(90deg, #000080, #1084d0);
+}
+
+[data-theme="aero"] {
+  color-scheme: light;
+  --font-body: "Segoe UI", "Frutiger", "Frutiger Linotype", "Myriad Pro", var(--font-body-loaded), sans-serif;
+  --font-display: var(--font-body);
+  --font-size: 15px;
+
+  --bg: #9fdcff;
+  --bg-image:
+    radial-gradient(circle at 12% 18%, rgb(255 255 255 / 85%) 0 3px, transparent 4px),
+    radial-gradient(circle at 78% 12%, rgb(255 255 255 / 70%) 0 2px, transparent 3px),
+    radial-gradient(ellipse 140% 55% at 50% 118%, #7fd14a 0%, #5bbf3a 40%, transparent 41%),
+    radial-gradient(ellipse 120% 60% at 50% 120%, #b8ef7a 0%, transparent 60%),
+    linear-gradient(180deg, #3fa9f5 0%, #8fd6ff 38%, #dff6ff 72%, #f4fff0 100%);
+  --surface: rgb(255 255 255 / 58%);
+  --surface-2: rgb(255 255 255 / 42%);
+  --surface-sunken: rgb(255 255 255 / 75%);
+  --text: #0a2a47;
+  --text-muted: #3a5f80;
+  --border: rgb(255 255 255 / 80%);
+  --border-strong: rgb(38 120 190 / 45%);
+
+  --primary: #34b233;
+  --primary-hover: #2a9d2a;
+  --primary-text: #ffffff;
+  --secondary: #1b9ae8;
+  --secondary-hover: #1288d4;
+  --secondary-text: #ffffff;
+  --tiktok-bg: #0b2a47;
+  --tiktok-text: #ffffff;
+  --accent-2: #00c6ff;
+
+  --success: #1d8f2a;
+  --warning: #c27c0e;
+  --danger: #d0312d;
+  --sale: #e5332a;
+  --badge-bg: #0b74c9;
+  --badge-text: #ffffff;
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 3px rgb(0 60 120 / 18%);
+  --shadow: 0 10px 30px -10px rgb(0 70 140 / 40%), inset 0 1px 0 rgb(255 255 255 / 90%);
+  --shadow-lg: 0 30px 70px -20px rgb(0 70 140 / 50%);
+  --focus-ring: 0 0 0 3px rgb(0 198 255 / 55%);
+  --header-bg: rgb(255 255 255 / 45%);
+  --header-border: rgb(255 255 255 / 85%);
+  --logo-bg: linear-gradient(180deg, #5ccbff, #0a7fd0);
+  --glass-blur: blur(16px) saturate(170%);
+  --gloss: linear-gradient(180deg, rgb(255 255 255 / 75%) 0%, rgb(255 255 255 / 15%) 50%, transparent 51%);
+}

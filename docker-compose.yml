@@ -1,0 +1,32 @@
+# Production-like local stack: the storefront container + DynamoDB Local.
+#   docker compose up --build
+#   npm run db:init          (once: creates the table in DynamoDB Local and loads the sample catalog)
+# Then open http://localhost:3000
+
+services:
+  web:
+    build:
+      context: .
+      target: runner
+      args:
+        NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    environment:
+      DATA_BACKEND: dynamodb
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+      TABLE_NAME: anitoy-mall
+      AWS_REGION: ap-southeast-1
+      # DynamoDB Local accepts any credentials.
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me}
+    depends_on:
+      - dynamodb
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    ports:
+      - "8000:8000"

@@ -1,0 +1,61 @@
+name: Deploy
+
+# Deploys main to AWS with GitHub OIDC (no long-lived AWS keys).
+# Repository settings needed:
+#   secrets.AWS_DEPLOY_ROLE_ARN  IAM role trusted for this repo's OIDC tokens
+#   vars.AWS_REGION              e.g. ap-southeast-1
+#   vars.DOMAIN_NAME / vars.CERTIFICATE_ARN / vars.ALARM_EMAIL / vars.SES_FROM_EMAIL / vars.SELLER_EMAIL (optional)
+#   vars.NEXT_PUBLIC_*           public storefront settings (pixel id, VietQR account, contact, ...)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            infra/package-lock.json
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+      - run: npm ci
+      - run: npm test
+      - run: npm ci
+        working-directory: infra
+      - name: cdk deploy
+        working-directory: infra
+        env:
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+          ANITOY_DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+          ANITOY_CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+          ANITOY_ALARM_EMAIL: ${{ vars.ALARM_EMAIL }}
+          ANITOY_SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
+          ANITOY_SELLER_EMAIL: ${{ vars.SELLER_EMAIL }}
+          NEXT_PUBLIC_TIKTOK_PIXEL_ID: ${{ vars.NEXT_PUBLIC_TIKTOK_PIXEL_ID }}
+          NEXT_PUBLIC_TIKTOK_SHOP_URL: ${{ vars.NEXT_PUBLIC_TIKTOK_SHOP_URL }}
+          NEXT_PUBLIC_VIETQR_BANK_ID: ${{ vars.NEXT_PUBLIC_VIETQR_BANK_ID }}
+          NEXT_PUBLIC_VIETQR_ACCOUNT_NO: ${{ vars.NEXT_PUBLIC_VIETQR_ACCOUNT_NO }}
+          NEXT_PUBLIC_VIETQR_ACCOUNT_NAME: ${{ vars.NEXT_PUBLIC_VIETQR_ACCOUNT_NAME }}
+          NEXT_PUBLIC_CONTACT_PHONE: ${{ vars.NEXT_PUBLIC_CONTACT_PHONE }}
+          NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
+          NEXT_PUBLIC_CONTACT_ZALO: ${{ vars.NEXT_PUBLIC_CONTACT_ZALO }}
+        run: npx cdk deploy --require-approval never --outputs-file cdk-outputs.json

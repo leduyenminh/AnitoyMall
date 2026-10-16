@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# local data store (orders, synced catalog, TikTok tokens)
+.data/
+
+# env files
+.env
+.env.*
+!.env.example
+
+# aws cdk
+cdk.out/
+infra/cdk.out/
+infra/cdk.context.json
+
+# misc
+.DS_Store
+*.log
+coverage/
