@@ -22,3 +22,15 @@ export async function requireAdminMutation(request: Request): Promise<NextRespon
   }
   return null;
 }
+
+/**
+ * Public origin for links handed to third parties (payment return URLs). Uses the deployed
+ * SITE_URL when known, otherwise the host the shopper is browsing (dev, previews).
+ */
+export function publicOrigin(request: Request): string {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, "");
+  const url = new URL(request.url);
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.host;
+  const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
+  return `${proto}://${host}`;
+}

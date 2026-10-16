@@ -1,6 +1,7 @@
 import { productTitle, skuName } from "../catalog";
+import { applyVoucher, promoTitle, type VoucherIssue } from "../promotions";
 import { site } from "../site";
-import type { CartItemInput, Locale, Product } from "../types";
+import type { CartItemInput, Locale, Product, Promotion } from "../types";
 
 /** Per-line purchase limit; protects stock from a single runaway cart. */
 export const MAX_QTY_PER_LINE = 20;
@@ -29,6 +30,11 @@ export interface Quote {
   lines: QuoteLine[];
   itemCount: number;
   subtotal: number;
+  /** Voucher discount on the merchandise subtotal. */
+  discount: number;
+  /** The website voucher that was applied (or rejected, see voucherIssue). */
+  voucher?: { code: string; title: string; minSpend?: number };
+  voucherIssue?: VoucherIssue;
   shippingFee: number;
   total: number;
   /** Amount still needed to unlock free shipping (0 once reached). */
@@ -63,6 +69,7 @@ export function buildQuote(
   items: (CartItemInput & { price?: number })[],
   products: Product[],
   locale: Locale,
+  options: { voucherCode?: string; promotions?: Promotion[]; now?: Date } = {},
 ): Quote {
   const byId = new Map(products.map((p) => [p.id, p]));
   const lines: QuoteLine[] = normaliseItems(items).map((item) => {
@@ -110,14 +117,24 @@ export function buildQuote(
   });
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+  // Free shipping is earned on the merchandise subtotal, before any voucher.
   const shippingFee = shippingFor(subtotal);
+  const applied = options.voucherCode
+    ? applyVoucher(options.voucherCode, options.promotions ?? [], subtotal, options.now)
+    : undefined;
+  const discount = applied?.discount ?? 0;
   return {
     currency: site.currency,
     lines,
     itemCount: lines.reduce((sum, l) => sum + l.quantity, 0),
     subtotal,
+    discount,
+    ...(applied?.voucher
+      ? { voucher: { code: applied.voucher.code!, title: promoTitle(applied.voucher, locale), minSpend: applied.voucher.minSpend } }
+      : {}),
+    ...(applied?.issue ? { voucherIssue: applied.issue } : {}),
     shippingFee,
-    total: subtotal + shippingFee,
+    total: subtotal - discount + shippingFee,
     freeShippingRemaining: subtotal > 0 ? Math.max(0, site.shipping.freeThreshold - subtotal) : site.shipping.freeThreshold,
     hasIssues: lines.some((l) => l.issue),
   };

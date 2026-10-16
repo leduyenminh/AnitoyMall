@@ -15,13 +15,18 @@ const schema = z.object({
       }),
     )
     .max(50),
+  voucherCode: z.string().trim().max(40).optional(),
 });
 
 /** Authoritative prices, stock and shipping for a cart. */
 export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return json({ error: "invalid" }, 400);
-  const { items, locale } = parsed.data;
-  const products = await (await getRepository()).getProducts(items.map((i) => i.productId));
-  return json(buildQuote(items, products, locale));
+  const { items, locale, voucherCode } = parsed.data;
+  const repo = await getRepository();
+  const [products, promotions] = await Promise.all([
+    repo.getProducts(items.map((i) => i.productId)),
+    voucherCode ? repo.listPromotions() : Promise.resolve([]),
+  ]);
+  return json(buildQuote(items, products, locale, { voucherCode, promotions }));
 }

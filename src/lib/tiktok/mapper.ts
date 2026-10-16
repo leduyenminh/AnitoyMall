@@ -93,6 +93,7 @@ export function mapTikTokProduct(
     attributes,
     skus,
     tiktokProductId: detail.id,
+    tiktokUrl: existing?.tiktokUrl,
     tiktokVideoIds: existing?.tiktokVideoIds ?? [],
     featured: existing?.featured ?? 0,
     status: !detail.status || detail.status === "ACTIVATE" ? "active" : "archived",

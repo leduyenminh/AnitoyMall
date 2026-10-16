@@ -92,5 +92,8 @@ export const seedVideos: TikTokVideo[] = rows.map(([id, views, title, pinned]) =
   updatedAt: SNAPSHOT,
 }));
 
-/** 4:5 product photo cropped from a video's cover. */
-export const coverPhoto = (videoId: string) => `/shop/videos/${videoId}-product.webp`;
+/**
+ * Square photo cropped from a video cover. Only for items whose TikTok Shop listing photos are not
+ * available; listing photos always come first.
+ */
+export const coverPhoto = (videoId: string) => `/shop/videos/${videoId}-square.webp`;

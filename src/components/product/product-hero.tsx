@@ -34,6 +34,7 @@ export interface HeroProduct {
   images: string[];
   skus: HeroSku[];
   tiktokProductId?: string;
+  tiktokUrl?: string;
   /** Product videos, most viewed first. Shown in the gallery next to the photos. */
   videos: VideoCard[];
 }
@@ -200,7 +201,7 @@ export function ProductHero({ product }: { product: HeroProduct }) {
         <div className="pdp-buy__actions">{buttons}</div>
         {soldOut && <p className="alert alert--warning small">{t.product.soldOutHint}</p>}
 
-        <a className="btn btn--tiktok btn--block" href={tiktokProductUrl(product.tiktokProductId)} target="_blank" rel="noopener">
+        <a className="btn btn--tiktok btn--block" href={tiktokProductUrl(product.tiktokProductId, product.tiktokUrl)} target="_blank" rel="noopener">
           <TikTokIcon size={18} /> {t.product.buyOnTikTok}
           <span className="btn__hint">{t.product.buyOnTikTokHint}</span>
         </a>

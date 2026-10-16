@@ -43,7 +43,8 @@ describe("seed catalog", () => {
     for (const product of seedProducts) {
       const images = [...product.images, ...product.skus.flatMap((s) => (s.image ? [s.image] : []))];
       for (const image of images) {
-        expect(image, product.id).toMatch(/^\/shop\/videos\/\d+-product\.webp$/);
+        // Listing photos from TikTok Shop, or square crops of the shop's own video covers.
+        expect(image, product.id).toMatch(/^\/shop\/(products\/\d+-\d+|videos\/\d+-square)\.webp$/);
         expect(existsSync(publicFile(image)), image).toBe(true);
       }
     }

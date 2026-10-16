@@ -94,6 +94,7 @@ export default async function ProductPage({ params }: Props) {
           collectionLabel: collectionName(product.collection, lang),
           images: product.images,
           tiktokProductId: product.tiktokProductId,
+          tiktokUrl: product.tiktokUrl,
           videos: videos.map(toVideoCard),
           skus: product.skus.map((s) => ({
             id: s.id,

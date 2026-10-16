@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { provinces } from "@/lib/checkout/provinces";
 import { isValidEmail, normalisePhone } from "@/lib/checkout/validation";
-import { formatMoney } from "@/lib/money";
-import { bankTransferEnabled } from "@/lib/site";
+import { fmt, paymentMethodText } from "@/i18n";
+import { formatMoney, formatShortMoney } from "@/lib/money";
 import type { PaymentMethod } from "@/lib/types";
 import { attribution, trackPixel } from "../analytics/pixel";
 import { useCart } from "../cart/cart-context";
@@ -42,14 +42,32 @@ function loadDraft(): Draft {
   }
 }
 
-export function CheckoutForm() {
+export interface CheckoutVoucher {
+  code: string;
+  title: string;
+  minSpend?: number;
+}
+
+const ONLINE: PaymentMethod[] = ["zalopay", "momo", "card", "atm"];
+
+export function CheckoutForm({ methods, vouchers }: { methods: PaymentMethod[]; vouchers: CheckoutVoucher[] }) {
   const { t, lang, href } = useI18n();
   const cart = useCart();
   const router = useRouter();
-  const { quote, refresh } = useServerQuote(cart.lines, lang);
+  const [voucherInput, setVoucherInput] = useState("");
+  const [voucherCode, setVoucherCode] = useState<string>();
+  const { quote, refresh } = useServerQuote(cart.lines, lang, voucherCode);
+  const subtotal = quote?.subtotal ?? cart.subtotal;
+  const voucherApplied = Boolean(voucherCode && quote?.voucher && !quote.voucherIssue);
+  const voucherMessage =
+    voucherCode && quote?.voucherIssue === "not_found"
+      ? t.checkout.voucherNotFound
+      : voucherCode && quote?.voucherIssue === "min_spend"
+        ? fmt(t.checkout.voucherMinSpend, { code: voucherCode, amount: formatMoney(quote.voucher?.minSpend ?? 0, lang) })
+        : undefined;
   // Returning customers get their details back (stored only in this browser).
   const [draft, setDraft] = useState<Draft>(loadDraft);
-  const [payment, setPayment] = useState<PaymentMethod>("cod");
+  const [payment, setPayment] = useState<PaymentMethod>(methods[0] ?? "cod");
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [formError, setFormError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
@@ -110,20 +128,38 @@ export function CheckoutForm() {
           address: { province: draft.province, ward: draft.ward, street: draft.street },
           note: draft.note || undefined,
           paymentMethod: payment,
+          ...(voucherApplied ? { voucherCode } : {}),
           attribution: attribution(),
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as { id?: string; token?: string; error?: string };
+      const json = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        token?: string;
+        error?: string;
+        paymentUrl?: string;
+        paymentError?: boolean;
+      };
       if (res.ok && json.id && json.token) {
-        // Keep showing progress (not an empty cart) while the confirmation page loads.
+        // Keep showing progress (not an empty cart) while the next page loads.
         setPlaced(true);
-        router.push(`${href(`/order/${json.id}`)}?t=${encodeURIComponent(json.token)}&new=1`);
         cart.clear();
+        if (json.paymentUrl) {
+          window.location.assign(json.paymentUrl);
+        } else {
+          const status = json.paymentError ? "&payment=start_failed" : "";
+          router.push(`${href(`/order/${json.id}`)}?t=${encodeURIComponent(json.token)}&new=1${status}`);
+        }
         return;
       }
-      // Prices or stock moved: the quote hook refreshes the cart, ask the shopper to review.
-      setFormError(json.error === "quote_changed" ? t.checkout.errors.stock : t.checkout.errors.generic);
-      if (json.error === "quote_changed") refresh();
+      // Prices, stock or the voucher changed: refresh the quote and ask the shopper to review.
+      setFormError(
+        json.error === "quote_changed"
+          ? t.checkout.errors.stock
+          : json.error === "voucher_invalid"
+            ? t.checkout.errors.voucher
+            : t.checkout.errors.generic,
+      );
+      if (json.error === "quote_changed" || json.error === "voucher_invalid") refresh();
     } catch {
       setFormError(t.checkout.errors.generic);
     }
@@ -133,7 +169,7 @@ export function CheckoutForm() {
   if (placed) {
     return (
       <div className="empty-state card" role="status">
-        <p className="empty-state__title">{t.checkout.placing}</p>
+        <p className="empty-state__title">{ONLINE.includes(payment) ? t.checkout.redirecting : t.checkout.placing}</p>
       </div>
     );
   }
@@ -229,22 +265,21 @@ export function CheckoutForm() {
           <div className="card__body">
             <fieldset className="pay-options">
               <legend className="card__title">{t.checkout.payment}</legend>
-              <label className="pay-option">
-                <input type="radio" name="payment" value="cod" checked={payment === "cod"} onChange={() => setPayment("cod")} />
-                <span className="pay-option__body">
-                  <span className="pay-option__title"><CashIcon size={18} /> {t.checkout.cod}</span>
-                  <span className="muted small">{t.checkout.codDesc}</span>
-                </span>
-              </label>
-              {bankTransferEnabled && (
-                <label className="pay-option">
-                  <input type="radio" name="payment" value="bank_transfer" checked={payment === "bank_transfer"} onChange={() => setPayment("bank_transfer")} />
-                  <span className="pay-option__body">
-                    <span className="pay-option__title">🏦 {t.checkout.bank}</span>
-                    <span className="muted small">{t.checkout.bankDesc}</span>
-                  </span>
-                </label>
-              )}
+              {methods.map((method) => {
+                const { label, description } = paymentMethodText(method, t);
+                return (
+                  <label key={method} className="pay-option">
+                    <input type="radio" name="payment" value={method} checked={payment === method} onChange={() => setPayment(method)} />
+                    <span className="pay-option__body">
+                      <span className="pay-option__title">
+                        <PaymentIcon method={method} /> {label}
+                      </span>
+                      <span className="muted small">{description}</span>
+                    </span>
+                  </label>
+                );
+              })}
+              <p className="muted small pay-options__note">{t.checkout.tiktokOnly}</p>
             </fieldset>
           </div>
         </section>
@@ -276,12 +311,78 @@ export function CheckoutForm() {
               );
             })}
           </ul>
-          <FreeShippingMeter subtotal={quote?.subtotal ?? cart.subtotal} />
+          <FreeShippingMeter subtotal={subtotal} />
+          <div className="voucher-box">
+            <label className="label" htmlFor="co-voucher">
+              {t.checkout.voucher}
+            </label>
+            {voucherApplied ? (
+              <div className="voucher-box__applied">
+                <span>{fmt(t.checkout.voucherApplied, { code: voucherCode! })}</span>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => setVoucherCode(undefined)}>
+                  {t.checkout.removeVoucher}
+                </button>
+              </div>
+            ) : (
+              <div className="voucher-box__row">
+                <input
+                  id="co-voucher"
+                  className="input"
+                  value={voucherInput}
+                  placeholder={t.checkout.voucherPlaceholder}
+                  autoComplete="off"
+                  onChange={(e) => setVoucherInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (voucherInput.trim()) setVoucherCode(voucherInput.trim().toUpperCase());
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm"
+                  disabled={!voucherInput.trim()}
+                  onClick={() => setVoucherCode(voucherInput.trim().toUpperCase())}
+                >
+                  {t.checkout.applyVoucher}
+                </button>
+              </div>
+            )}
+            {voucherMessage && <p className="field__error">{voucherMessage}</p>}
+            {!voucherApplied && vouchers.length > 0 && (
+              <div className="voucher-box__suggestions" role="group" aria-label={t.checkout.availableVouchers}>
+                {vouchers.map((v) => (
+                  <button
+                    key={v.code}
+                    type="button"
+                    className="voucher-suggestion"
+                    disabled={subtotal < (v.minSpend ?? 0)}
+                    onClick={() => {
+                      setVoucherInput(v.code);
+                      setVoucherCode(v.code);
+                    }}
+                  >
+                    <b>{v.code}</b> {v.title}
+                    {v.minSpend ? ` · ${fmt(t.promo.minSpend, { amount: formatShortMoney(v.minSpend) })}` : ""}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <dl className="totals">
             <div>
               <dt>{t.cart.subtotal}</dt>
-              <dd>{formatMoney(quote?.subtotal ?? cart.subtotal, lang)}</dd>
+              <dd>{formatMoney(subtotal, lang)}</dd>
             </div>
+            {quote && quote.discount > 0 && (
+              <div className="totals__discount">
+                <dt>
+                  {t.cart.discount} ({quote.voucher?.code})
+                </dt>
+                <dd>−{formatMoney(quote.discount, lang)}</dd>
+              </div>
+            )}
             <div>
               <dt>{t.cart.shipping}</dt>
               <dd>{!quote ? "…" : quote.shippingFee ? formatMoney(quote.shippingFee, lang) : t.cart.free}</dd>
@@ -303,5 +404,16 @@ export function CheckoutForm() {
         </div>
       </aside>
     </form>
+  );
+}
+
+/** Small text badges for the payment options (no third-party logos). */
+function PaymentIcon({ method }: { method: PaymentMethod }) {
+  if (method === "cod") return <CashIcon size={18} />;
+  const label = { bank_transfer: "QR", zalopay: "Zalo", momo: "MoMo", card: "VISA", atm: "ATM" }[method];
+  return (
+    <span className={`pay-option__icon pay-option__icon--${method}`} aria-hidden="true">
+      {label}
+    </span>
   );
 }

@@ -2,18 +2,34 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminActions, OrderActions } from "@/components/admin/admin-actions";
+import { PromotionsEditor } from "@/components/admin/promotions-editor";
 import { isLocale, localePath } from "@/i18n/config";
 import { totalStock } from "@/lib/catalog";
 import { formatMoney } from "@/lib/money";
 import { allowedActions } from "@/lib/orders";
+import { enabledPaymentMethods, loadPaymentSettings } from "@/lib/payments/settings";
+import { isLive } from "@/lib/promotions";
 import { getRepository } from "@/lib/repo";
 import { loadCredentials } from "@/lib/tiktok/credentials";
+import type { PaymentMethod } from "@/lib/types";
 import { formatViews } from "@/lib/videos";
 
 // Seller back office (protected by the proxy with HTTP Basic auth). Kept deliberately simple:
-// TikTok Shop connection, catalog sync, and order fulfilment.
+// TikTok Shop connection, catalog sync, promotions, payments and order fulfilment.
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
+
+/** Server component rendered per request (force-dynamic), so "now" is the request time. */
+const requestTime = () => Date.now();
+
+const methodLabels: Record<PaymentMethod, string> = {
+  cod: "COD",
+  bank_transfer: "Bank",
+  zalopay: "ZaloPay",
+  momo: "MoMo",
+  card: "Card",
+  atm: "ATM",
+};
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" });
 
@@ -28,13 +44,18 @@ export default async function AdminPage({
   if (!isLocale(lang)) notFound();
   const { connected, videos: videosJustConnected, error } = await searchParams;
   const repo = await getRepository();
-  const [creds, sync, orders, products, videos] = await Promise.all([
+  const [creds, sync, orders, products, videos, promotions, payments] = await Promise.all([
     loadCredentials({ fresh: true }),
     repo.getSyncState(),
     repo.listOrders(50),
     repo.listProducts({ includeArchived: true }),
     repo.listVideos(),
+    repo.listPromotions(),
+    loadPaymentSettings(),
   ]);
+  const now = requestTime();
+  const livePromos = promotions.filter((p) => isLive(p, new Date(now)));
+  const methods = enabledPaymentMethods(payments);
   const videosConnected = Boolean(creds.displayAccessToken);
   const totalVideoViews = videos.reduce((sum, v) => sum + v.views, 0);
 
@@ -70,6 +91,10 @@ export default async function AdminPage({
         <div className="stat card window">
           <span className="stat__label">Low stock (≤3)</span>
           <span className="stat__value">{lowStock.length}</span>
+        </div>
+        <div className="stat card window">
+          <span className="stat__label">Live promotions</span>
+          <span className="stat__value">{livePromos.length}</span>
         </div>
         <div className="stat card window">
           <span className="stat__label">Last sync</span>
@@ -155,6 +180,51 @@ export default async function AdminPage({
 
       <section className="card window">
         <div className="window__titlebar" aria-hidden="true">
+          <span className="window__title">Promotions</span>
+        </div>
+        <div className="card__body">
+          <h2 className="card__title">Campaigns &amp; vouchers</h2>
+          <p className="muted small">
+            Live ones appear in the strip at the top of the home page. Website vouchers are redeemed at checkout; TikTok Shop
+            vouchers are only advertised here and link to the shop on TikTok. Changes reach the storefront within about two minutes.
+          </p>
+          <PromotionsEditor promotions={promotions} now={now} />
+        </div>
+      </section>
+
+      <section className="card window">
+        <div className="window__titlebar" aria-hidden="true">
+          <span className="window__title">Payments</span>
+        </div>
+        <div className="card__body">
+          <h2 className="card__title">Payment methods at checkout</h2>
+          <dl className="specs">
+            <div>
+              <dt>Offered now</dt>
+              <dd>{methods.map((m) => methodLabels[m]).join(" · ")}</dd>
+            </div>
+            <div>
+              <dt>ZaloPay (wallet, cards, ATM)</dt>
+              <dd>{payments.zalopay ? `Configured · app ${payments.zalopay.appId}` : "Not configured"}</dd>
+            </div>
+            <div>
+              <dt>MoMo</dt>
+              <dd>{payments.momo ? `Configured · ${payments.momo.partnerCode}` : "Not configured"}</dd>
+            </div>
+            <div>
+              <dt>VNPay (cards, ATM)</dt>
+              <dd>{payments.vnpay ? `Configured · ${payments.vnpay.tmnCode}` : "Not configured"}</dd>
+            </div>
+          </dl>
+          <p className="muted small">
+            Add merchant keys to the payments secret (AWS) or .env.local (local) to switch a method on. Unpaid online orders are
+            released after 45 minutes.
+          </p>
+        </div>
+      </section>
+
+      <section className="card window">
+        <div className="window__titlebar" aria-hidden="true">
           <span className="window__title">Orders</span>
         </div>
         <div className="card__body">
@@ -205,7 +275,8 @@ export default async function AdminPage({
                         <span className={`badge badge--status-${o.status}`}>{o.status}</span>
                         <br />
                         <span className="small muted">
-                          {o.paymentMethod === "cod" ? "COD" : "Bank"} · {o.paymentStatus}
+                          {methodLabels[o.paymentMethod]} · {o.paymentStatus}
+                          {o.voucherCode ? ` · ${o.voucherCode}` : ""}
                         </span>
                       </td>
                       <td>

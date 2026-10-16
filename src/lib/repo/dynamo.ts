@@ -12,7 +12,7 @@ import {
   type TransactWriteCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { config } from "../config";
-import type { Order, Product, Sku, SyncState, TikTokVideo } from "../types";
+import type { Order, Product, Promotion, Sku, SyncState, TikTokVideo } from "../types";
 import {
   ConflictError,
   DuplicateOrderError,
@@ -25,6 +25,7 @@ import {
 //   Product  PK=PRODUCT#<id>  SK=PRODUCT  GSI1PK=PRODUCT  GSI1SK=<slug>        (list + slug lookup)
 //   Order    PK=ORDER#<id>    SK=ORDER    GSI1PK=ORDER    GSI1SK=<createdAt>   (newest first)
 //   Video    PK=VIDEO#<id>    SK=VIDEO    GSI1PK=VIDEO    GSI1SK=<id>          (TikTok covers + views)
+//   Promo    PK=PROMO#<id>    SK=PROMO    GSI1PK=PROMO    GSI1SK=<endsAt>      (campaigns, vouchers)
 //   Event    PK=EVENT#<id>    SK=EVENT    expiresAt=<epoch seconds>            (webhook dedupe, TTL)
 //   Sync     PK=SYNC#tiktok   SK=STATE
 //
@@ -291,6 +292,29 @@ export class DynamoRepository implements Repository {
         }),
       );
     }
+  }
+
+  async listPromotions(): Promise<Promotion[]> {
+    const items = await this.queryAll({
+      TableName: this.table,
+      IndexName: GSI1,
+      KeyConditionExpression: "GSI1PK = :pk",
+      ExpressionAttributeValues: { ":pk": "PROMO" },
+    });
+    return items.map((item) => stripKeys<Promotion>(item));
+  }
+
+  async putPromotion(promotion: Promotion): Promise<void> {
+    await this.db.send(
+      new PutCommand({
+        TableName: this.table,
+        Item: { PK: `PROMO#${promotion.id}`, SK: "PROMO", GSI1PK: "PROMO", GSI1SK: promotion.endsAt, ...promotion },
+      }),
+    );
+  }
+
+  async deletePromotion(id: string): Promise<void> {
+    await this.db.send(new DeleteCommand({ TableName: this.table, Key: { PK: `PROMO#${id}`, SK: "PROMO" } }));
   }
 
   async claimEvent(eventId: string, ttlSeconds: number): Promise<boolean> {

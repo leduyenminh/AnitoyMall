@@ -1,0 +1,71 @@
+import type { Promotion } from "@/lib/types";
+
+// Starter promotions, modelled on the shop's own TikTok captions ("mùa sale giữa tháng… mua từ
+// 150k trở lên có voucher"). SAMPLE VALUES: edit, end or delete them in /admin → Promotions.
+
+const CREATED = "2026-10-13T00:00:00.000+07:00";
+
+export const seedPromotions: Promotion[] = [
+  {
+    id: "seed-campaign-mid-oct",
+    kind: "campaign",
+    channel: "website",
+    title: "Sale giữa tháng 10",
+    titleEn: "Mid-October sale",
+    description: "Freeship đơn từ 150K và voucher giảm thêm cho fan Frieren & Neko.",
+    descriptionEn: "Free shipping from 150K plus extra vouchers for Frieren & Neko fans.",
+    startsAt: "2026-10-13T00:00:00.000+07:00",
+    endsAt: "2026-10-18T23:59:59.000+07:00",
+    active: true,
+    createdAt: CREATED,
+    updatedAt: CREATED,
+  },
+  {
+    id: "seed-voucher-15k",
+    kind: "voucher",
+    channel: "website",
+    title: "Giảm 15K",
+    titleEn: "15K off",
+    code: "ANITOY15K",
+    discountType: "amount",
+    discountValue: 15000,
+    minSpend: 150000,
+    startsAt: "2026-10-13T00:00:00.000+07:00",
+    endsAt: "2026-10-18T23:59:59.000+07:00",
+    active: true,
+    createdAt: CREATED,
+    updatedAt: CREATED,
+  },
+  {
+    id: "seed-voucher-10pct",
+    kind: "voucher",
+    channel: "website",
+    title: "Giảm 10%",
+    titleEn: "10% off",
+    code: "ANITOY10",
+    discountType: "percent",
+    discountValue: 10,
+    maxDiscount: 40000,
+    minSpend: 300000,
+    startsAt: "2026-10-13T00:00:00.000+07:00",
+    endsAt: "2026-10-18T23:59:59.000+07:00",
+    active: true,
+    createdAt: CREATED,
+    updatedAt: CREATED,
+  },
+  {
+    id: "seed-voucher-tiktok",
+    kind: "voucher",
+    channel: "tiktok",
+    title: "Voucher shop trên TikTok Shop",
+    titleEn: "Shop voucher on TikTok Shop",
+    description: "Mua từ 150K có voucher – nhận ngay trong gian hàng TikTok Shop.",
+    descriptionEn: "Spend 150K+ and get a voucher – claim it in our TikTok Shop.",
+    minSpend: 150000,
+    startsAt: "2026-10-13T00:00:00.000+07:00",
+    endsAt: "2026-10-18T23:59:59.000+07:00",
+    active: true,
+    createdAt: CREATED,
+    updatedAt: CREATED,
+  },
+];

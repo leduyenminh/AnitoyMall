@@ -9,11 +9,11 @@ import { cartStore, type CartLine } from "./cart-store";
  * Re-price the cart on the server whenever it changes, and fold authoritative prices and stock
  * back into the stored cart so the drawer and badge stay truthful.
  */
-export function useServerQuote(lines: CartLine[], lang: Locale) {
+export function useServerQuote(lines: CartLine[], lang: Locale, voucherCode?: string) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState(false);
   const [nonce, setNonce] = useState(0);
-  const key = JSON.stringify(lines.map((l) => [l.productId, l.skuId, l.quantity, l.price]));
+  const key = JSON.stringify([voucherCode, lines.map((l) => [l.productId, l.skuId, l.quantity, l.price])]);
 
   useEffect(() => {
     if (lines.length === 0) return;
@@ -23,6 +23,7 @@ export function useServerQuote(lines: CartLine[], lang: Locale) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         locale: lang,
+        ...(voucherCode ? { voucherCode } : {}),
         items: lines.map((l) => ({ productId: l.productId, skuId: l.skuId, quantity: l.quantity, price: l.price })),
       }),
       signal: controller.signal,

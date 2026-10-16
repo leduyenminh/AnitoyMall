@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderTracker } from "@/components/checkout/order-tracker";
+import { PayNowButton } from "@/components/checkout/pay-now-button";
 import { ProductImage } from "@/components/product/product-image";
-import { fmt, getDictionary } from "@/i18n";
+import { fmt, getDictionary, paymentMethodText } from "@/i18n";
 import { isLocale, localePath } from "@/i18n/config";
 import { formatMoney } from "@/lib/money";
-import { getOrderForViewer } from "@/lib/orders";
+import { getOrderForViewer, isOnlinePayment } from "@/lib/orders";
 import { site, vietQrImageUrl } from "@/lib/site";
 import type { OrderStatus } from "@/lib/types";
 
@@ -25,11 +26,11 @@ export default async function OrderPage({
   searchParams,
 }: {
   params: Promise<{ lang: string; id: string }>;
-  searchParams: Promise<{ t?: string; new?: string }>;
+  searchParams: Promise<{ t?: string; new?: string; payment?: string }>;
 }) {
   const { lang, id } = await params;
   if (!isLocale(lang)) notFound();
-  const { t: token, new: isNew } = await searchParams;
+  const { t: token, new: isNew, payment: paymentResult } = await searchParams;
   const t = getDictionary(lang);
   const order = await getOrderForViewer(id, token);
   const money = (n: number) => formatMoney(n, lang, order?.currency);
@@ -51,6 +52,7 @@ export default async function OrderPage({
   const qr = order.paymentMethod === "bank_transfer" && order.paymentStatus === "unpaid" && order.status !== "cancelled"
     ? vietQrImageUrl(order.total, order.id)
     : undefined;
+  const awaitingOnline = isOnlinePayment(order) && order.paymentStatus === "unpaid" && order.status !== "cancelled";
   const current = steps.indexOf(order.status);
   const placed = new Intl.DateTimeFormat(lang === "vi" ? "vi-VN" : "en-GB", {
     dateStyle: "medium",
@@ -70,6 +72,22 @@ export default async function OrderPage({
         </p>
       </header>
 
+      {paymentResult === "success" && order.paymentStatus === "paid" && (
+        <p className="alert alert--success" role="status">
+          {t.order.paymentSuccess}
+        </p>
+      )}
+      {paymentResult === "failed" && awaitingOnline && (
+        <p className="alert alert--error" role="alert">
+          {t.order.paymentFailed}
+        </p>
+      )}
+      {paymentResult === "start_failed" && awaitingOnline && (
+        <p className="alert alert--error" role="alert">
+          {t.order.paymentStartFailed}
+        </p>
+      )}
+
       <section className="card window">
         <div className="window__titlebar" aria-hidden="true">
           <span className="window__title">{t.order.status}</span>
@@ -88,11 +106,17 @@ export default async function OrderPage({
             </ol>
           )}
           <p className="small">
-            {t.order.payment}: <strong>{order.paymentMethod === "cod" ? t.checkout.cod : t.checkout.bank}</strong> ·{" "}
+            {t.order.payment}: <strong>{paymentMethodText(order.paymentMethod, t).label}</strong> ·{" "}
             <span className={order.paymentStatus === "paid" ? "text-success" : "muted"}>{t.order.paymentStatus[order.paymentStatus]}</span>
           </p>
           {order.paymentMethod === "cod" && order.paymentStatus === "unpaid" && order.status !== "cancelled" && (
             <p className="muted small">{fmt(t.order.codHint, { amount: money(order.total) })}</p>
+          )}
+          {awaitingOnline && token && (
+            <>
+              <p className="muted small">{t.order.awaitingPayment}</p>
+              <PayNowButton orderId={order.id} token={token} />
+            </>
           )}
         </div>
       </section>
@@ -163,6 +187,15 @@ export default async function OrderPage({
               <dt>{t.cart.subtotal}</dt>
               <dd>{money(order.subtotal)}</dd>
             </div>
+            {order.discount ? (
+              <div className="totals__discount">
+                <dt>
+                  {t.cart.discount}
+                  {order.voucherCode ? ` (${order.voucherCode})` : ""}
+                </dt>
+                <dd>−{money(order.discount)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>{t.cart.shipping}</dt>
               <dd>{order.shippingFee ? money(order.shippingFee) : t.cart.free}</dd>

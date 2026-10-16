@@ -42,3 +42,12 @@ export function percentOff(price: number, compareAt?: number): number | undefine
   if (!compareAt || compareAt <= price) return undefined;
   return Math.round(((compareAt - price) / compareAt) * 100);
 }
+
+/** "150K", "1.2M" – the shorthand Vietnamese shoppers use for VND amounts in vouchers. */
+export function formatShortMoney(minor: number, currency: string = site.currency): string {
+  const value = fromMinorUnits(minor, currency);
+  if (currency !== "VND") return formatMoney(minor, "en", currency);
+  if (value >= 1_000_000) return `${+(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1000) return `${+(value / 1000).toFixed(1)}K`;
+  return `${value}đ`;
+}

@@ -6,8 +6,8 @@ import { isValidEmail, normalisePhone } from "./checkout/validation";
 import { publish } from "./events/publish";
 import { log } from "./log";
 import { ConflictError, DuplicateOrderError, getRepository, OutOfStockError } from "./repo";
-import { bankTransferEnabled } from "./site";
-import type { Attribution, Order, OrderStatus } from "./types";
+import { enabledPaymentMethods, loadPaymentSettings, ONLINE_METHODS } from "./payments/settings";
+import type { Attribution, Order, OrderStatus, PaymentProvider } from "./types";
 
 export const checkoutSchema = z.object({
   locale: z.enum(["vi", "en"]),
@@ -33,7 +33,8 @@ export const checkoutSchema = z.object({
     street: z.string().trim().min(3).max(200),
   }),
   note: z.string().trim().max(500).optional(),
-  paymentMethod: z.enum(["cod", "bank_transfer"]),
+  paymentMethod: z.enum(["cod", "bank_transfer", "zalopay", "momo", "card", "atm"]),
+  voucherCode: z.string().trim().max(40).optional(),
   attribution: z
     .object({
       ttclid: z.string().max(500).optional(),
@@ -47,7 +48,7 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
 export class CheckoutError extends Error {
   constructor(
-    public readonly code: "invalid" | "quote_changed",
+    public readonly code: "invalid" | "quote_changed" | "voucher_invalid",
     public readonly details: { fields?: string[]; quote?: Quote } = {},
   ) {
     super(code);
@@ -71,15 +72,20 @@ export async function createOrder(raw: unknown, request: { ip?: string; userAgen
   const fields: string[] = [];
   if (!phone) fields.push("customer.phone");
   if (email && !isValidEmail(email)) fields.push("customer.email");
-  if (input.paymentMethod === "bank_transfer" && !bankTransferEnabled) fields.push("paymentMethod");
+  if (!enabledPaymentMethods(await loadPaymentSettings()).includes(input.paymentMethod)) fields.push("paymentMethod");
   if (fields.length) throw new CheckoutError("invalid", { fields });
 
   const repo = await getRepository();
+  const promotions = input.voucherCode ? await repo.listPromotions() : [];
   const quoteFor = async () =>
-    buildQuote(input.items, await repo.getProducts(input.items.map((i) => i.productId)), input.locale);
+    buildQuote(input.items, await repo.getProducts(input.items.map((i) => i.productId)), input.locale, {
+      voucherCode: input.voucherCode,
+      promotions,
+    });
 
   const quote = await quoteFor();
   if (quote.hasIssues || quote.itemCount === 0) throw new CheckoutError("quote_changed", { quote });
+  if (quote.voucherIssue) throw new CheckoutError("voucher_invalid", { quote });
 
   const now = new Date().toISOString();
   const attribution: Attribution = { ...input.attribution, ip: request.ip, userAgent: request.userAgent };
@@ -108,6 +114,7 @@ export async function createOrder(raw: unknown, request: { ip?: string; userAgen
     })),
     currency: quote.currency,
     subtotal: quote.subtotal,
+    ...(quote.discount ? { discount: quote.discount, voucherCode: quote.voucher?.code } : {}),
     shippingFee: quote.shippingFee,
     total: quote.total,
     attribution,
@@ -134,6 +141,74 @@ export async function createOrder(raw: unknown, request: { ip?: string; userAgen
   log.info("order.created", { orderId: order.id, total: order.total, lines: order.lines.length, payment: order.paymentMethod });
   await publish({ type: "order.created", orderId: order.id });
   return order;
+}
+
+/** Orders paid through ZaloPay, MoMo or VNPay (as opposed to COD / manual bank transfer). */
+export const isOnlinePayment = (order: Pick<Order, "paymentMethod">) => ONLINE_METHODS.includes(order.paymentMethod);
+
+/**
+ * Mark an order paid from a verified gateway result. Idempotent: notifications and browser
+ * returns can both arrive, and gateways retry.
+ */
+export async function recordOnlinePayment(
+  orderId: string,
+  payment: { provider: PaymentProvider; ref: string; amount: number; transactionId?: string },
+): Promise<{ result: "paid" | "already_paid" | "not_found" | "amount_mismatch"; order?: Order }> {
+  const repo = await getRepository();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const order = await repo.getOrder(orderId);
+    if (!order) return { result: "not_found" };
+    if (order.paymentStatus === "paid") return { result: "already_paid", order };
+    if (payment.amount !== order.total) {
+      log.warn("payment.amount_mismatch", { orderId, expected: order.total, received: payment.amount, provider: payment.provider });
+      return { result: "amount_mismatch", order };
+    }
+    const now = new Date().toISOString();
+    const next: Order = {
+      ...order,
+      paymentStatus: "paid",
+      payment: { provider: payment.provider, ref: payment.ref, attempts: order.payment?.attempts ?? 1, transactionId: payment.transactionId, paidAt: now },
+      history: [...order.history, { status: "paid", at: now, note: payment.provider }],
+      updatedAt: now,
+    };
+    try {
+      await repo.saveOrder(next, order.updatedAt);
+    } catch (error) {
+      if (error instanceof ConflictError) continue; // changed meanwhile: re-read and retry
+      throw error;
+    }
+    log.info("payment.confirmed", { orderId, provider: payment.provider, transactionId: payment.transactionId });
+    if (order.status === "cancelled") {
+      // Money arrived after the unpaid order timed out: the seller must refund or re-open it.
+      log.warn("payment.paid_after_cancel", { orderId, provider: payment.provider, transactionId: payment.transactionId });
+    }
+    await publish({ type: "order.paid", orderId });
+    return { result: "paid", order: next };
+  }
+  throw new ConflictError(`Order ${orderId} kept changing while recording payment`);
+}
+
+/**
+ * Cancel online-payment orders that were never paid, returning their stock. Run by the scheduled
+ * worker; shoppers can retry payment until then.
+ */
+export async function expireUnpaidOrders(maxAgeMinutes = 45, now = new Date()): Promise<string[]> {
+  const repo = await getRepository();
+  const cutoff = now.getTime() - maxAgeMinutes * 60_000;
+  const stale = (await repo.listOrders(200)).filter(
+    (o) => isOnlinePayment(o) && o.paymentStatus === "unpaid" && o.status === "pending" && Date.parse(o.createdAt) < cutoff,
+  );
+  const expired: string[] = [];
+  for (const order of stale) {
+    try {
+      await applyOrderAction(order.id, "cancel", "payment_timeout");
+      expired.push(order.id);
+    } catch (error) {
+      log.warn("order.expire_failed", { orderId: order.id, error: String(error) });
+    }
+  }
+  if (expired.length) log.info("orders.expired", { orders: expired });
+  return expired;
 }
 
 /** Orders hold personal data, so viewing one requires the random token from the confirmation link. */
@@ -164,7 +239,7 @@ export function allowedActions(order: Order): OrderAction[] {
 }
 
 /** Seller-side order workflow (admin). Uses optimistic locking against concurrent edits. */
-export async function applyOrderAction(id: string, action: OrderAction): Promise<Order> {
+export async function applyOrderAction(id: string, action: OrderAction, note?: string): Promise<Order> {
   const repo = await getRepository();
   const order = await repo.getOrder(id);
   if (!order) throw new Error(`Order ${id} not found`);
@@ -180,7 +255,7 @@ export async function applyOrderAction(id: string, action: OrderAction): Promise
     becamePaid = true;
   } else {
     next.status = transitions[action].to;
-    next.history.push({ status: next.status, at: now });
+    next.history.push({ status: next.status, at: now, ...(note ? { note } : {}) });
     // Cash on delivery is collected when the parcel is delivered.
     if (action === "deliver" && order.paymentMethod === "cod" && order.paymentStatus === "unpaid") {
       next.paymentStatus = "paid";

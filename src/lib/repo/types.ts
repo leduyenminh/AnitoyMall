@@ -1,4 +1,4 @@
-import type { Order, Product, SyncState, TikTokVideo } from "../types";
+import type { Order, Product, Promotion, SyncState, TikTokVideo } from "../types";
 
 export interface StockLine {
   productId: string;
@@ -52,6 +52,11 @@ export interface Repository {
   listVideos(): Promise<TikTokVideo[]>;
   getVideos(ids: string[]): Promise<TikTokVideo[]>;
   putVideos(videos: TikTokVideo[]): Promise<void>;
+
+  /** Campaigns and vouchers managed in /admin. */
+  listPromotions(): Promise<Promotion[]>;
+  putPromotion(promotion: Promotion): Promise<void>;
+  deletePromotion(id: string): Promise<void>;
 
   /** Record that an event was handled. Returns false if it had already been claimed (dedupe). */
   claimEvent(eventId: string, ttlSeconds: number): Promise<boolean>;

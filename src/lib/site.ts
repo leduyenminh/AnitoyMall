@@ -67,7 +67,8 @@ export function vietQrImageUrl(amount: number, memo: string): string | undefined
   return `https://img.vietqr.io/image/${encodeURIComponent(bankId)}-${encodeURIComponent(accountNo)}-compact2.png?${params}`;
 }
 
-export function tiktokProductUrl(tiktokProductId: string | undefined): string {
+export function tiktokProductUrl(tiktokProductId: string | undefined, tiktokUrl?: string): string {
+  if (tiktokUrl) return tiktokUrl;
   return tiktokProductId
     ? site.tiktok.productUrlTemplate.replace("{id}", encodeURIComponent(tiktokProductId))
     : site.tiktok.shopUrl;

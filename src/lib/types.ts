@@ -46,6 +46,8 @@ export interface Product {
   attributes: ProductAttribute[];
   skus: Sku[];
   tiktokProductId?: string;
+  /** The listing's public TikTok Shop page, when known. */
+  tiktokUrl?: string;
   /** TikTok videos that showcase this product (embedded as social proof). */
   tiktokVideoIds: string[];
   /** Merchandising weight; higher sorts first under "Featured". */
@@ -71,8 +73,37 @@ export interface TikTokVideo {
   updatedAt: string;
 }
 
+/**
+ * A running campaign or a voucher. Website vouchers carry a code that applies at checkout here;
+ * TikTok vouchers are shown for information and claimed on TikTok Shop.
+ */
+export interface Promotion {
+  id: string;
+  kind: "campaign" | "voucher";
+  channel: "website" | "tiktok";
+  title: string;
+  titleEn?: string;
+  description?: string;
+  descriptionEn?: string;
+  code?: string;
+  discountType?: "amount" | "percent";
+  /** VND for "amount", 1–100 for "percent". */
+  discountValue?: number;
+  /** Cap for percentage vouchers, VND. */
+  maxDiscount?: number;
+  /** Minimum merchandise subtotal, VND. */
+  minSpend?: number;
+  startsAt: string;
+  endsAt: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
-export type PaymentMethod = "cod" | "bank_transfer";
+/** Mirrors what TikTok Shop VN offers buyers (PayLater and TikTok balance only exist inside TikTok). */
+export type PaymentMethod = "cod" | "bank_transfer" | "zalopay" | "momo" | "card" | "atm";
+export type PaymentProvider = "zalopay" | "momo" | "vnpay";
 export type PaymentStatus = "unpaid" | "paid";
 
 export interface OrderLine {
@@ -124,8 +155,20 @@ export interface Order {
   lines: OrderLine[];
   currency: string;
   subtotal: number;
+  /** Voucher discount, VND (absent on orders placed before vouchers existed). */
+  discount?: number;
+  voucherCode?: string;
   shippingFee: number;
   total: number;
+  /** Online payment through a gateway (ZaloPay, MoMo, VNPay). */
+  payment?: {
+    provider: PaymentProvider;
+    /** Reference sent to the gateway for the latest attempt. */
+    ref: string;
+    attempts: number;
+    transactionId?: string;
+    paidAt?: string;
+  };
   attribution?: Attribution;
   history: { status: OrderStatus | "paid"; at: string; note?: string }[];
   createdAt: string;

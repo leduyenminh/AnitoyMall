@@ -646,3 +646,37 @@
   border-radius: 0;
   box-shadow: var(--bevel-field);
 }
+
+/* ---------- Promotions ---------- */
+[data-theme="win95"] .promo-strip {
+  background: #ffffe1;
+  border: 0;
+  box-shadow: var(--bevel-field);
+}
+[data-theme="win95"] .promo-strip__live {
+  border-radius: 0;
+  background: #000080;
+  color: #fff;
+}
+[data-theme="win95"] .voucher-ticket,
+[data-theme="win95"] .voucher-suggestion {
+  border-radius: 0;
+  border: 1px dashed #000;
+  background: #fff;
+}
+[data-theme="win95"] .voucher-ticket__code,
+[data-theme="win95"] .voucher-ticket__link {
+  background: #c0c0c0;
+  box-shadow: var(--bevel-out);
+  border: 0;
+}
+[data-theme="win95"] .voucher-ticket__value,
+[data-theme="win95"] .promo-strip__time {
+  color: #000080;
+}
+[data-theme="win95"] .hero-product {
+  border-radius: 0;
+  box-shadow: var(--bevel-out);
+  padding: 3px;
+  background: #c0c0c0;
+}

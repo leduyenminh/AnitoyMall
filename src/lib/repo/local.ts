@@ -1,9 +1,10 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { seedProducts } from "@/data/seed-products";
+import { seedPromotions } from "@/data/promotions";
 import { seedVideos } from "@/data/tiktok-videos";
 import { config } from "../config";
-import type { Order, Product, SyncState, TikTokVideo } from "../types";
+import type { Order, Product, Promotion, SyncState, TikTokVideo } from "../types";
 import {
   ConflictError,
   DuplicateOrderError,
@@ -17,12 +18,13 @@ import {
 // are serialised through a process-wide lock.
 
 /** Bump when the seed catalog changes shape; older dev stores get the new catalog (orders are kept). */
-const STORE_VERSION = 2;
+const STORE_VERSION = 3;
 
 interface StoreFile {
   version: number;
   products: Record<string, Product>;
   videos: Record<string, TikTokVideo>;
+  promotions: Record<string, Promotion>;
   orders: Record<string, Order>;
   events: Record<string, number>;
   sync: SyncState;
@@ -42,10 +44,11 @@ const clone = <T>(value: T): T => structuredClone(value);
 export class LocalRepository implements Repository {
   private readonly file = path.resolve(config.localDataDir, "store.json");
 
-  private seedCatalog(): Pick<StoreFile, "products" | "videos"> {
+  private seedCatalog(): Pick<StoreFile, "products" | "videos" | "promotions"> {
     return {
       products: Object.fromEntries(seedProducts.map((p) => [p.id, clone(p)])),
       videos: Object.fromEntries(seedVideos.map((v) => [v.id, clone(v)])),
+      promotions: Object.fromEntries(seedPromotions.map((p) => [p.id, clone(p)])),
     };
   }
 
@@ -205,6 +208,22 @@ export class LocalRepository implements Repository {
   putVideos(videos: TikTokVideo[]): Promise<void> {
     return this.mutate((store) => {
       for (const video of videos) store.videos[video.id] = clone(video);
+    });
+  }
+
+  async listPromotions(): Promise<Promotion[]> {
+    return Object.values((await this.read()).promotions);
+  }
+
+  putPromotion(promotion: Promotion): Promise<void> {
+    return this.mutate((store) => {
+      store.promotions[promotion.id] = clone(promotion);
+    });
+  }
+
+  deletePromotion(id: string): Promise<void> {
+    return this.mutate((store) => {
+      delete store.promotions[id];
     });
   }
 

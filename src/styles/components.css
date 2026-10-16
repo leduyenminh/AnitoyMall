@@ -710,7 +710,7 @@ fieldset {
 .product-card__media {
   position: relative;
   display: block;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1;
   background: var(--surface-sunken);
 }
 /* Sold-out items stay fully visible; only the badge and a light veil mark them. */

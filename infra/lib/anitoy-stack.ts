@@ -108,6 +108,26 @@ export class AnitoyMallStack extends Stack {
         passwordLength: 24,
       },
     });
+    // Merchant keys for ZaloPay / MoMo / VNPay. Empty values keep that method switched off.
+    const paymentsSecret = new secretsmanager.Secret(this, "PaymentsSecret", {
+      description: "Online payment gateway credentials (JSON): ZaloPay, MoMo, VNPay",
+      secretStringValue: SecretValue.unsafePlainText(
+        JSON.stringify({
+          ZALOPAY_APP_ID: "",
+          ZALOPAY_KEY1: "",
+          ZALOPAY_KEY2: "",
+          ZALOPAY_ENDPOINT: "https://sb-openapi.zalopay.vn",
+          MOMO_PARTNER_CODE: "",
+          MOMO_ACCESS_KEY: "",
+          MOMO_SECRET_KEY: "",
+          MOMO_ENDPOINT: "https://test-payment.momo.vn",
+          VNPAY_TMN_CODE: "",
+          VNPAY_HASH_SECRET: "",
+          VNPAY_PAY_URL: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+        }),
+      ),
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
     const originSecret = new secretsmanager.Secret(this, "OriginVerifySecret", {
       description: "Shared secret CloudFront sends to the Lambda origin",
       generateSecretString: { excludePunctuation: true, passwordLength: 40 },
@@ -148,6 +168,7 @@ export class AnitoyMallStack extends Stack {
         EVENTS_QUEUE_URL: events.queueUrl,
         TIKTOK_SECRET_ARN: tiktokSecret.secretArn,
         ADMIN_SECRET_ARN: adminSecret.secretArn,
+        PAYMENTS_SECRET_ARN: paymentsSecret.secretArn,
         // Resolved by CloudFormation at deploy time; requests without it are rejected.
         ORIGIN_VERIFY_SECRET: originSecret.secretValue.unsafeUnwrap(),
         ...(configuredSiteUrl ? { SITE_URL: configuredSiteUrl } : {}),
@@ -164,6 +185,7 @@ export class AnitoyMallStack extends Stack {
     tiktokSecret.grantRead(storefront);
     tiktokSecret.grantWrite(storefront); // OAuth callback stores the seller's tokens
     adminSecret.grantRead(storefront);
+    paymentsSecret.grantRead(storefront);
 
     // ---------------------------------------------------------------- CDN
     // Behind CloudFront the Host header is the Lambda URL; pass the public host along.
@@ -358,6 +380,22 @@ export class AnitoyMallStack extends Stack {
     alarm("StorefrontErrorsAlarm", storefront.metricErrors({ period: Duration.minutes(5) }), 5, "Storefront Lambda errors.");
     alarm("EventsWorkerErrorsAlarm", eventsWorker.metricErrors({ period: Duration.minutes(5) }), 3, "Events worker errors.");
     alarm("SyncErrorsAlarm", syncWorker.metricErrors({ period: Duration.hours(1) }), 2, "TikTok Shop sync is failing.");
+    const paymentAnomalies = new logs.MetricFilter(this, "PaymentAnomalies", {
+      logGroup: storefront.logGroup,
+      filterPattern: logs.FilterPattern.any(
+        logs.FilterPattern.stringValue("$.event", "=", "payment.amount_mismatch"),
+        logs.FilterPattern.stringValue("$.event", "=", "payment.paid_after_cancel"),
+      ),
+      metricNamespace: "AnitoyMall",
+      metricName: "PaymentAnomalies",
+      metricValue: "1",
+    });
+    alarm(
+      "PaymentAnomaliesAlarm",
+      paymentAnomalies.metric({ period: Duration.minutes(5), statistic: "Sum" }),
+      1,
+      "A gateway payment did not match its order (wrong amount, or paid after the order timed out): refund or re-open it in /admin.",
+    );
 
     // ---------------------------------------------------------------- Outputs
     new CfnOutput(this, "SiteUrl", { value: siteUrl });
@@ -373,6 +411,14 @@ export class AnitoyMallStack extends Stack {
       description: "Set as the OAuth redirect URL in TikTok Shop Partner Center",
     });
     new CfnOutput(this, "TikTokSecretArn", { value: tiktokSecret.secretArn });
+    new CfnOutput(this, "PaymentsSecretArn", {
+      value: paymentsSecret.secretArn,
+      description: "Fill in gateway keys to enable ZaloPay / MoMo / card / ATM checkout",
+    });
+    new CfnOutput(this, "PaymentIpnUrls", {
+      value: ["zalopay", "momo", "vnpay"].map((p) => `${siteUrl}/api/payments/${p}/ipn`).join(" "),
+      description: "Server-to-server notification URLs to register with each gateway",
+    });
     new CfnOutput(this, "AdminSecretArn", {
       value: adminSecret.secretArn,
       description: "aws secretsmanager get-secret-value --secret-id <arn> to read the admin password",

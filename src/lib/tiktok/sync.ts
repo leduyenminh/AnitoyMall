@@ -73,7 +73,8 @@ export async function syncCatalog(): Promise<SyncResult> {
     for (const product of existing) {
       if (product.status !== "active") continue;
       const delisted = product.source === "tiktok" && !seen.has(product.tiktokProductId ?? "");
-      const replacedSeed = product.source === "seed" && seen.size > 0;
+      // Seed items that share a listing id were just updated in place; only the others go.
+      const replacedSeed = product.source === "seed" && seen.size > 0 && !seen.has(product.tiktokProductId ?? "");
       if (delisted || replacedSeed) {
         await repo.putProduct({ ...product, status: "archived", updatedAt: new Date().toISOString() });
         changedSlugs.push(product.slug);

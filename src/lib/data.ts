@@ -19,3 +19,6 @@ export const getVideoMap = cache(async (): Promise<Map<string, TikTokVideo>> => 
   const videos = await (await getRepository()).listVideos();
   return new Map(videos.map((v) => [v.id, v]));
 });
+
+/** Campaigns and vouchers (live ones are picked at render time). */
+export const getPromotions = cache(async () => (await getRepository()).listPromotions());
