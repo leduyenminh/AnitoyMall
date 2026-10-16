@@ -57,6 +57,20 @@ export interface Product {
   updatedAt: string;
 }
 
+/** A video on the shop's TikTok account. Played on the site through TikTok's own embed player. */
+export interface TikTokVideo {
+  id: string;
+  title: string;
+  /** View count reported by TikTok (refreshed by the video sync). */
+  views: number;
+  likes?: number;
+  /** Portrait cover (9:16), served from our own storage. */
+  cover: string;
+  pinned?: boolean;
+  createdAt?: string;
+  updatedAt: string;
+}
+
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
 export type PaymentMethod = "cod" | "bank_transfer";
 export type PaymentStatus = "unpaid" | "paid";
@@ -130,4 +144,7 @@ export interface SyncState {
   lastError?: string;
   productsSynced?: number;
   productsArchived?: number;
+  videosSyncedAt?: string;
+  videosSynced?: number;
+  videosError?: string;
 }

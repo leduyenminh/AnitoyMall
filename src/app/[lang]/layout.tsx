@@ -106,7 +106,7 @@ export default async function LocaleLayout({
             "@type": "OnlineStore",
             name: site.name,
             url: site.url,
-            logo: `${site.url}/icon.svg`,
+            logo: `${site.url}/icon.png`,
             slogan: site.tagline,
             sameAs: [site.tiktok.profileUrl],
             ...(site.contact.email ? { email: site.contact.email } : {}),

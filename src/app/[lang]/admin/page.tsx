@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/money";
 import { allowedActions } from "@/lib/orders";
 import { getRepository } from "@/lib/repo";
 import { loadCredentials } from "@/lib/tiktok/credentials";
+import { formatViews } from "@/lib/videos";
 
 // Seller back office (protected by the proxy with HTTP Basic auth). Kept deliberately simple:
 // TikTok Shop connection, catalog sync, and order fulfilment.
@@ -21,18 +22,21 @@ export default async function AdminPage({
   searchParams,
 }: {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ connected?: string; error?: string }>;
+  searchParams: Promise<{ connected?: string; videos?: string; error?: string }>;
 }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
-  const { connected, error } = await searchParams;
+  const { connected, videos: videosJustConnected, error } = await searchParams;
   const repo = await getRepository();
-  const [creds, sync, orders, products] = await Promise.all([
+  const [creds, sync, orders, products, videos] = await Promise.all([
     loadCredentials({ fresh: true }),
     repo.getSyncState(),
     repo.listOrders(50),
     repo.listProducts({ includeArchived: true }),
+    repo.listVideos(),
   ]);
+  const videosConnected = Boolean(creds.displayAccessToken);
+  const totalVideoViews = videos.reduce((sum, v) => sum + v.views, 0);
 
   const appConfigured = Boolean(creds.appKey && creds.appSecret && creds.serviceId);
   const isConnected = Boolean(creds.accessToken);
@@ -51,6 +55,7 @@ export default async function AdminPage({
       </header>
 
       {connected && <p className="alert alert--success">TikTok Shop connected.</p>}
+      {videosJustConnected && <p className="alert alert--success">TikTok account connected – video view counts are syncing.</p>}
       {error && <p className="alert alert--error">TikTok authorization failed: {error}</p>}
 
       <div className="admin__stats">
@@ -103,6 +108,48 @@ export default async function AdminPage({
             </div>
           </dl>
           <AdminActions canConnect={appConfigured} isConnected={isConnected} />
+        </div>
+      </section>
+
+      <section className="card window">
+        <div className="window__titlebar" aria-hidden="true">
+          <span className="window__title">TikTok videos</span>
+        </div>
+        <div className="card__body">
+          <h2 className="card__title">TikTok videos &amp; view counts</h2>
+          <p className="muted small">
+            Videos play on the site through TikTok&apos;s official player. Connect the @leduyenminh account (TikTok Login Kit +
+            Display API) so view counts and new videos are refreshed with every sync.
+          </p>
+          <dl className="specs">
+            <div>
+              <dt>Account</dt>
+              <dd>{videosConnected ? `Connected${creds.displayConnectedAt ? ` (${dateFmt.format(new Date(creds.displayConnectedAt))})` : ""}` : "Not connected – showing the snapshot of 16 Oct 2026"}</dd>
+            </div>
+            <div>
+              <dt>Videos</dt>
+              <dd>
+                {videos.length} · {formatViews(totalVideoViews)} views
+              </dd>
+            </div>
+            <div>
+              <dt>Last video sync</dt>
+              <dd>
+                {sync.videosSyncedAt ? dateFmt.format(new Date(sync.videosSyncedAt)) : "—"}
+                {sync.videosError && <span className="text-danger"> · {sync.videosError}</span>}
+              </dd>
+            </div>
+          </dl>
+          <div className="admin__actions">
+            <a
+              className={`btn btn--tiktok${creds.displayClientKey ? "" : " is-disabled"}`}
+              href={creds.displayClientKey ? "/api/admin/tiktok/videos/connect" : undefined}
+              aria-disabled={!creds.displayClientKey}
+            >
+              {videosConnected ? "Reconnect TikTok account" : "Connect TikTok account"}
+            </a>
+            {!creds.displayClientKey && <span className="small muted">Set the Display API client key/secret first.</span>}
+          </div>
         </div>
       </section>
 

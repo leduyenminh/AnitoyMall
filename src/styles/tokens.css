@@ -152,12 +152,13 @@
   --font-size: 15px;
 
   --bg: #9fdcff;
+  /* Sky only, with soft-edged light: the fixed layer sits behind every glass panel, so it must
+     not contain hard shapes (the meadow lives in the footer and scrolls with the page). */
   --bg-image:
-    radial-gradient(circle at 12% 18%, rgb(255 255 255 / 85%) 0 3px, transparent 4px),
-    radial-gradient(circle at 78% 12%, rgb(255 255 255 / 70%) 0 2px, transparent 3px),
-    radial-gradient(ellipse 140% 55% at 50% 118%, #7fd14a 0%, #5bbf3a 40%, transparent 41%),
-    radial-gradient(ellipse 120% 60% at 50% 120%, #b8ef7a 0%, transparent 60%),
-    linear-gradient(180deg, #3fa9f5 0%, #8fd6ff 38%, #dff6ff 72%, #f4fff0 100%);
+    radial-gradient(900px 520px at 88% -8%, rgb(255 255 255 / 75%), rgb(255 255 255 / 0%) 65%),
+    linear-gradient(115deg, rgb(255 255 255 / 0%) 32%, rgb(255 255 255 / 22%) 44%, rgb(255 255 255 / 0%) 56%),
+    linear-gradient(125deg, rgb(255 255 255 / 0%) 58%, rgb(255 255 255 / 14%) 66%, rgb(255 255 255 / 0%) 74%),
+    linear-gradient(180deg, #3aa6f2 0%, #79c9f8 35%, #c4ebff 70%, #eaf8ff 100%);
   --surface: rgb(255 255 255 / 58%);
   --surface-2: rgb(255 255 255 / 42%);
   --surface-sunken: rgb(255 255 255 / 75%);

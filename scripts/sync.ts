@@ -1,11 +1,11 @@
-// Run a TikTok Shop catalog sync from the command line (uses the same code as the sync Lambda).
+// Run the TikTok sync (Shop catalog + video view counts) from the command line, using .env.local.
 //   npm run sync
 
 async function main() {
-  const { ensureFreshToken } = await import("../src/lib/tiktok/auth");
-  const { syncCatalog } = await import("../src/lib/tiktok/sync");
-  await ensureFreshToken(24 * 3600);
-  console.log(await syncCatalog());
+  const { syncAll } = await import("../src/lib/tiktok/sync");
+  const result = await syncAll();
+  console.log(JSON.stringify(result, null, 2));
+  if (result.errors.length) process.exit(1);
 }
 
 main().catch((error) => {

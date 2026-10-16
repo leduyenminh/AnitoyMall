@@ -7,7 +7,8 @@ import { Breadcrumbs } from "@/components/seo";
 import { getDictionary } from "@/i18n";
 import { isLocale, localePath } from "@/i18n/config";
 import { isInStock, priceRange, searchText } from "@/lib/catalog";
-import { getActiveProducts } from "@/lib/data";
+import { getActiveProducts, getVideoMap } from "@/lib/data";
+import { productVideos, totalViews } from "@/lib/videos";
 
 export const revalidate = 120;
 
@@ -26,7 +27,7 @@ export default async function ShopPage({ params }: { params: Promise<{ lang: str
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
   const t = getDictionary(lang);
-  const products = await getActiveProducts();
+  const [products, videoMap] = await Promise.all([getActiveProducts(), getVideoMap()]);
 
   const items: CatalogItem[] = products.map((p) => ({
     id: p.id,
@@ -36,10 +37,11 @@ export default async function ShopPage({ params }: { params: Promise<{ lang: str
     inStock: isInStock(p),
     featured: p.featured,
     createdAt: p.createdAt,
+    views: totalViews(productVideos(p, videoMap)),
     search: searchText(p),
   }));
   const cards = Object.fromEntries(
-    products.map((p, i) => [p.id, <ProductCard key={p.id} product={p} lang={lang} t={t} priority={i < 2} />]),
+    products.map((p, i) => [p.id, <ProductCard key={p.id} product={p} lang={lang} t={t} videos={videoMap} priority={i < 2} />]),
   );
 
   return (

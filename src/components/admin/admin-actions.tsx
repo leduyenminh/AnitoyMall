@@ -28,7 +28,7 @@ export function AdminActions({ canConnect, isConnected }: { canConnect: boolean;
       <button
         type="button"
         className="btn btn--secondary"
-        disabled={!isConnected || pending}
+        disabled={pending}
         onClick={() =>
           start(async () => {
             try {
@@ -41,7 +41,7 @@ export function AdminActions({ canConnect, isConnected }: { canConnect: boolean;
           })
         }
       >
-        {pending ? "Syncing…" : "Sync catalog now"}
+        {pending ? "Syncing…" : "Sync now"}
       </button>
       {message && (
         <p className="small muted" role="status">

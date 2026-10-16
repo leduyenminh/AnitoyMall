@@ -4,7 +4,7 @@ import { getRepository } from "../repo";
 import { TikTokShopClient } from "../tiktok/client";
 import { saveCredentials } from "../tiktok/credentials";
 import { trackOrderEvent } from "../tiktok/events-api";
-import { adjustTikTokInventory, refreshProduct, syncCatalog } from "../tiktok/sync";
+import { adjustTikTokInventory, refreshProduct, syncAll } from "../tiktok/sync";
 import { TtsEventType, type TtsNotification } from "../tiktok/types";
 import type { Order } from "../types";
 import type { DomainEvent } from "./types";
@@ -99,8 +99,10 @@ export async function handleEvent(event: DomainEvent): Promise<void> {
     case "tiktok.notification":
       await onTikTokNotification(event.notification);
       return;
-    case "catalog.sync":
-      await syncCatalog();
+    case "catalog.sync": {
+      const { errors } = await syncAll();
+      if (errors.length) throw new Error(errors.join("; "));
       return;
+    }
   }
 }

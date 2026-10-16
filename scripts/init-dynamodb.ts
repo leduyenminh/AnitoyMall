@@ -63,10 +63,12 @@ async function main() {
   }
 
   const { seedProducts } = await import("../src/data/seed-products");
+  const { seedVideos } = await import("../src/data/tiktok-videos");
   const { getRepository } = await import("../src/lib/repo");
   const repo = await getRepository();
   for (const product of seedProducts) await repo.putProduct(product);
-  console.log(`Loaded ${seedProducts.length} sample products`);
+  await repo.putVideos(seedVideos);
+  console.log(`Loaded ${seedProducts.length} sample products and ${seedVideos.length} TikTok videos`);
 }
 
 main().catch((error) => {

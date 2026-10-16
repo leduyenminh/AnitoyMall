@@ -1,14 +1,18 @@
 import type { Locale, Product, ProductAttribute, Sku } from "./types";
 
+// `cover` is a video id whose cover represents the collection.
 export const collections = [
-  { slug: "frieren", name: { vi: "Frieren", en: "Frieren" }, accent: "#3fa877" },
-  { slug: "neko", name: { vi: "Neko Kawaii", en: "Neko Kawaii" }, accent: "#e9a95c" },
+  { slug: "frieren", name: { vi: "Frieren", en: "Frieren" }, accent: "#3fa877", cover: "7627760395935091989" },
+  { slug: "neko", name: { vi: "Neko Kawaii", en: "Neko Kawaii" }, accent: "#e9a95c", cover: "7621236910488440071" },
+  { slug: "kimetsu", name: { vi: "Kimetsu no Yaiba", en: "Demon Slayer" }, accent: "#d9432f", cover: "7499143655727336722" },
+  { slug: "more", name: { vi: "Anime & game khác", en: "More anime & games" }, accent: "#7d52b8", cover: "7484071785730772229" },
 ] as const;
 
 export const categories = [
-  { slug: "mini", name: { vi: "Mini 10cm", en: "Mini 10cm" } },
-  { slug: "figure", name: { vi: "Mô hình 15–20cm", en: "Figures 15–20cm" } },
+  { slug: "mini", name: { vi: "Mini 9–12cm", en: "Minis 9–12cm" } },
+  { slug: "figure", name: { vi: "Figure 20cm", en: "Figures 20cm" } },
   { slug: "set", name: { vi: "Combo tiết kiệm", en: "Value sets" } },
+  { slug: "accessory", name: { vi: "Móc khoá & phụ kiện", en: "Keychains & accessories" } },
 ] as const;
 
 export function collectionName(slug: string, locale: Locale): string {

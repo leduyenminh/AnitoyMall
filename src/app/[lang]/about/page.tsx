@@ -49,7 +49,7 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
           </div>
         </article>
         <div className="about__art">
-          <Image src="/art/trio-2.svg" alt="" fill unoptimized sizes="(min-width: 900px) 420px, 90vw" />
+          <Image src="/shop/videos/7627760395935091989-product.webp" alt="" fill sizes="(min-width: 900px) 420px, 90vw" />
         </div>
       </div>
     </div>

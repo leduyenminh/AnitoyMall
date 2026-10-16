@@ -38,5 +38,8 @@ export const config = {
     authorizeBase: env.TIKTOK_AUTHORIZE_BASE ?? "https://services.tiktokshop.com",
     /** TikTok for Business Events API (server-side conversions). */
     eventsAccessToken: env.TIKTOK_EVENTS_ACCESS_TOKEN,
+    /** TikTok for Developers app with Login Kit + Display API (video view counts). */
+    displayClientKey: env.TIKTOK_DISPLAY_CLIENT_KEY,
+    displayClientSecret: env.TIKTOK_DISPLAY_CLIENT_SECRET,
   },
 };

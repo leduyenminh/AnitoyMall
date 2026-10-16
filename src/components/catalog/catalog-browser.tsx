@@ -16,11 +16,13 @@ export interface CatalogItem {
   inStock: boolean;
   featured: number;
   createdAt: string;
+  /** Total TikTok views of the product's videos. */
+  views: number;
   search: string;
 }
 
-type Sort = "featured" | "newest" | "price-asc" | "price-desc";
-const sorts: Sort[] = ["featured", "newest", "price-asc", "price-desc"];
+type Sort = "featured" | "views" | "newest" | "price-asc" | "price-desc";
+const sorts: Sort[] = ["featured", "views", "newest", "price-asc", "price-desc"];
 
 /**
  * Instant client-side search, filter and sort over the whole catalog. The product cards are
@@ -72,6 +74,7 @@ export function CatalogBrowser({ items, cards }: { items: CatalogItem[]; cards: 
     const byStock = (a: CatalogItem, b: CatalogItem) => Number(b.inStock) - Number(a.inStock);
     const comparators: Record<Sort, (a: CatalogItem, b: CatalogItem) => number> = {
       featured: (a, b) => byStock(a, b) || b.featured - a.featured,
+      views: (a, b) => b.views - a.views,
       newest: (a, b) => b.createdAt.localeCompare(a.createdAt),
       "price-asc": (a, b) => a.price - b.price,
       "price-desc": (a, b) => b.price - a.price,
@@ -82,6 +85,7 @@ export function CatalogBrowser({ items, cards }: { items: CatalogItem[]; cards: 
   const active = Boolean(query || collection || category || inStockOnly);
   const sortLabels: Record<Sort, string> = {
     featured: t.catalog.sortFeatured,
+    views: t.catalog.sortViews,
     newest: t.catalog.sortNewest,
     "price-asc": t.catalog.sortPriceAsc,
     "price-desc": t.catalog.sortPriceDesc,

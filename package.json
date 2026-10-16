@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "art": "node scripts/generate-art.mjs",
+    "media": "node scripts/import-tiktok-media.mjs",
     "sync": "tsx --env-file-if-exists=.env.local scripts/sync.ts",
     "db:init": "tsx --env-file-if-exists=.env.local scripts/init-dynamodb.ts",
     "check": "npm run lint && npm run typecheck && npm run test"

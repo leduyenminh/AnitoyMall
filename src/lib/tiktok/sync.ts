@@ -3,7 +3,9 @@ import { log } from "../log";
 import { mirrorImages } from "../media";
 import { getRepository } from "../repo";
 import type { Product } from "../types";
+import { ensureFreshToken } from "./auth";
 import { TikTokShopClient } from "./client";
+import { syncVideoStats } from "./display";
 import { mapTikTokProduct, productChanged } from "./mapper";
 
 export interface SyncResult {
@@ -131,4 +133,26 @@ export async function adjustTikTokInventory(
       await repo.setSkuStock(line.productId, line.skuId, quantity + otherWarehouses);
     }
   }
+}
+
+/**
+ * Everything the scheduled sync does: TikTok Shop catalog/inventory and TikTok video view counts.
+ * The two are independent, so one failing does not stop the other; failures are re-thrown after
+ * both ran so the worker reports an error (and the alarm fires).
+ */
+export async function syncAll(): Promise<{ catalog?: SyncResult; videos?: Awaited<ReturnType<typeof syncVideoStats>>; errors: string[] }> {
+  const errors: string[] = [];
+  const result: { catalog?: SyncResult; videos?: Awaited<ReturnType<typeof syncVideoStats>>; errors: string[] } = { errors };
+  try {
+    await ensureFreshToken(24 * 3600);
+    result.catalog = await syncCatalog();
+  } catch (error) {
+    errors.push(`catalog: ${String(error)}`);
+  }
+  try {
+    result.videos = await syncVideoStats();
+  } catch (error) {
+    errors.push(`videos: ${String(error)}`);
+  }
+  return result;
 }

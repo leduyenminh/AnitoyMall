@@ -12,12 +12,15 @@ import { Logo } from "./logo";
 
 export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
   const href = (path: string) => localePath(lang, path);
+  const collectionLinks = collections.map((c) => ({ href: `${href("/shop")}?collection=${c.slug}`, label: c.name[lang] }));
   const nav = [
     { href: href("/shop"), label: t.nav.shop },
-    ...collections.map((c) => ({ href: `${href("/shop")}?collection=${c.slug}`, label: c.name[lang] })),
+    ...collectionLinks,
     { href: href("/about"), label: t.nav.about },
     { href: href("/help"), label: t.nav.help },
   ];
+  // The desktop bar keeps the two main collections; the rest are in the shop filters and footer.
+  const desktopNav = [nav[0]!, ...collectionLinks.slice(0, 2), { href: href("/help"), label: t.nav.help }];
 
   return (
     <header className="site-header">
@@ -48,7 +51,7 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
         </Link>
 
         <nav className="site-nav" aria-label={t.nav.menu}>
-          {nav.map((item) => (
+          {desktopNav.map((item) => (
             <Link key={item.href} href={item.href} className="site-nav__link">
               {item.label}
             </Link>

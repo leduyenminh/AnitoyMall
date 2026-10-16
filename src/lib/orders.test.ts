@@ -10,7 +10,7 @@ let repo: import("./repo").Repository;
 
 const validInput = () => ({
   locale: "vi",
-  items: [{ productId: "seed-frieren-mini", skuId: "seed-frieren-mini-chill", quantity: 2 }],
+  items: [{ productId: "seed-stark-chibi", skuId: "seed-stark-chibi-std", quantity: 2 }],
   customer: { name: "Nguyễn Test", phone: "0912 345 678" },
   address: { province: "Thành phố Hồ Chí Minh", ward: "Phường Bến Thành", street: "123 Đường Thử Nghiệm" },
   paymentMethod: "cod",
@@ -54,8 +54,8 @@ describe("createOrder", () => {
     expect(order.customer.phone).toBe("0912345678");
     expect(order.total).toBe(158000);
     expect(order.shippingFee).toBe(0);
-    const product = await repo.getProduct("seed-frieren-mini");
-    expect(product?.skus.find((s) => s.id === "seed-frieren-mini-chill")?.stock).toBe(2);
+    const product = await repo.getProduct("seed-stark-chibi");
+    expect(product?.skus.find((s) => s.id === "seed-stark-chibi-std")?.stock).toBe(2);
 
     expect(await orders.getOrderForViewer(order.id, order.accessToken)).not.toBeNull();
     expect(await orders.getOrderForViewer(order.id, "wrong-token")).toBeNull();
@@ -63,16 +63,16 @@ describe("createOrder", () => {
 
   it("returns a fresh quote instead of overselling", async () => {
     await expect(
-      orders.createOrder({ ...validInput(), items: [{ productId: "seed-frieren-mini", skuId: "seed-frieren-mini-chill", quantity: 3 }] }, {}),
+      orders.createOrder({ ...validInput(), items: [{ productId: "seed-stark-chibi", skuId: "seed-stark-chibi-std", quantity: 3 }] }, {}),
     ).rejects.toMatchObject({ code: "quote_changed" });
   });
 
   it("restocks on cancel and enforces the workflow", async () => {
     const order = await orders.createOrder(validInput(), {});
-    expect((await repo.getProduct("seed-frieren-mini"))?.skus[1]?.stock).toBe(0);
+    expect((await repo.getProduct("seed-stark-chibi"))?.skus[0]?.stock).toBe(0);
     await expect(orders.applyOrderAction(order.id, "deliver")).rejects.toThrow(/cannot/);
     await orders.applyOrderAction(order.id, "cancel");
-    expect((await repo.getProduct("seed-frieren-mini"))?.skus[1]?.stock).toBe(2);
+    expect((await repo.getProduct("seed-stark-chibi"))?.skus[0]?.stock).toBe(2);
     expect(orders.allowedActions((await repo.getOrder(order.id))!)).toEqual([]);
   });
 });

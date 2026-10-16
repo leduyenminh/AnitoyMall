@@ -91,18 +91,29 @@
   color: var(--primary);
   font-size: 1.2rem;
 }
-.hero__art {
-  position: relative;
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--surface) 80%, transparent), transparent 60%),
-    linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, var(--surface)), color-mix(in srgb, var(--accent-2) 22%, var(--surface)));
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
+/* The shop's three most-watched TikTok videos, fanned like phones on a desk. */
+.hero__videos {
+  display: grid;
+  grid-template-columns: 1fr 1.18fr 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0 1rem;
 }
-.hero__art-frame {
+.hero__videos .tiktok-video__meta {
+  display: none;
+}
+.hero__videos .tiktok-video__stage {
+  box-shadow: var(--shadow-lg);
+}
+.hero__videos > :nth-child(1) {
+  transform: rotate(-5deg) translate(10px, 18px);
+}
+.hero__videos > :nth-child(2) {
   position: relative;
-  aspect-ratio: 1;
+  z-index: 1;
+}
+.hero__videos > :nth-child(3) {
+  transform: rotate(5deg) translate(-10px, 18px);
 }
 
 .perks-strip {
@@ -161,7 +172,11 @@
 }
 .collection-card__art {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 5;
+  align-self: stretch;
+}
+.collection-card__art img {
+  object-fit: cover;
 }
 .collection-card__body {
   padding: 1rem 1.25rem;
@@ -276,7 +291,10 @@
 }
 .pdp-gallery__frame {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 5;
+}
+.pdp-gallery__frame.is-video {
+  background: #000;
 }
 .pdp-gallery__thumbs {
   display: flex;
@@ -286,8 +304,8 @@
 .pdp-gallery__thumb {
   position: relative;
   flex: none;
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 80px;
   padding: 0;
   border: 2px solid transparent;
   border-radius: var(--radius-sm);
@@ -297,6 +315,19 @@
 }
 .pdp-gallery__thumb.is-active {
   border-color: var(--primary);
+}
+.pdp-gallery__views {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0;
+  background: rgb(0 0 0 / 62%);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 .pdp-buy__title {
   font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.1rem);
@@ -574,7 +605,7 @@
 }
 .about__art {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 5;
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-lg);

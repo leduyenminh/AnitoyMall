@@ -1,9 +1,9 @@
 import { config } from "@/lib/config";
 import { publish } from "@/lib/events/publish";
 import { json, requireAdminMutation } from "@/lib/http";
-import { syncCatalog } from "@/lib/tiktok/sync";
+import { syncAll } from "@/lib/tiktok/sync";
 
-/** Start a catalog sync. On AWS it is queued for the worker; locally it runs right away. */
+/** Sync TikTok Shop catalog and video view counts. On AWS it is queued; locally it runs right away. */
 export async function POST(request: Request) {
   const denied = await requireAdminMutation(request);
   if (denied) return denied;
@@ -12,13 +12,11 @@ export async function POST(request: Request) {
     await publish({ type: "catalog.sync", reason: "admin" });
     return json({ message: "Sync queued – refresh in a minute." }, 202);
   }
-  try {
-    const result = await syncCatalog();
-    return json({
-      message: result.skipped ?? `Synced ${result.synced} listings (${result.changed} changed, ${result.archived} archived).`,
-      result,
-    });
-  } catch (error) {
-    return json({ error: String(error) }, 502);
-  }
+  const { catalog, videos, errors } = await syncAll();
+  const parts = [
+    catalog?.skipped ?? (catalog && `Shop: ${catalog.synced} listings (${catalog.changed} changed, ${catalog.archived} archived)`),
+    videos?.skipped ?? (videos && `Videos: ${videos.videos} (${videos.added} new)`),
+    ...errors,
+  ].filter(Boolean);
+  return json({ message: parts.join(" · "), catalog, videos, errors }, errors.length ? 502 : 200);
 }

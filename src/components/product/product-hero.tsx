@@ -5,13 +5,15 @@ import { useEffect, useState } from "react";
 import { fmt } from "@/i18n";
 import { formatMoney } from "@/lib/money";
 import { site, tiktokProductUrl } from "@/lib/site";
+import { formatViews, type VideoCard } from "@/lib/videos";
 import { trackPixel } from "../analytics/pixel";
 import { useCart } from "../cart/cart-context";
 import { QuantityStepper } from "../cart/cart-line-item";
 import { useI18n } from "../i18n";
-import { CashIcon, CheckIcon, MapIcon, TikTokIcon, TruckIcon } from "../icons";
+import { CashIcon, CheckIcon, MapIcon, PlayIcon, TikTokIcon, TruckIcon } from "../icons";
 import { Price } from "./price";
 import { ProductImage } from "./product-image";
+import { TikTokPlayer } from "./tiktok-video";
 
 const LOW_STOCK = 5;
 
@@ -32,7 +34,11 @@ export interface HeroProduct {
   images: string[];
   skus: HeroSku[];
   tiktokProductId?: string;
+  /** Product videos, most viewed first. Shown in the gallery next to the photos. */
+  videos: VideoCard[];
 }
+
+type Media = { kind: "image"; src: string } | { kind: "video"; video: VideoCard };
 
 /** Gallery and buy box: everything on the product page that reacts to the shopper. */
 export function ProductHero({ product }: { product: HeroProduct }) {
@@ -42,12 +48,16 @@ export function ProductHero({ product }: { product: HeroProduct }) {
   const initial = product.skus.find((s) => s.stock > 0) ?? product.skus[0];
   const [skuId, setSkuId] = useState(initial?.id);
   const [quantity, setQuantity] = useState(1);
-  const [imageIndex, setImageIndex] = useState(0);
+  const [mediaIndex, setMediaIndex] = useState(0);
   const [added, setAdded] = useState(false);
 
   const sku = product.skus.find((s) => s.id === skuId) ?? initial;
   const images = product.images.length ? product.images : sku?.image ? [sku.image] : [];
-  const shown = images[imageIndex] ?? images[0];
+  const media: Media[] = [
+    ...images.map((src) => ({ kind: "image" as const, src })),
+    ...product.videos.map((video) => ({ kind: "video" as const, video })),
+  ];
+  const shown = media[mediaIndex] ?? media[0];
 
   useEffect(() => {
     trackPixel("ViewContent", {
@@ -64,7 +74,7 @@ export function ProductHero({ product }: { product: HeroProduct }) {
     setQuantity(1);
     const next = product.skus.find((s) => s.id === id);
     const index = next?.image ? images.indexOf(next.image) : -1;
-    if (index >= 0) setImageIndex(index);
+    if (index >= 0) setMediaIndex(index);
   }
 
   function addToCart(open: boolean) {
@@ -118,22 +128,36 @@ export function ProductHero({ product }: { product: HeroProduct }) {
           <div className="window__titlebar" aria-hidden="true">
             <span className="window__title">{product.slug}.bmp</span>
           </div>
-          <div className="pdp-gallery__frame">
-            <ProductImage src={shown} alt={product.title} sizes="(min-width: 900px) 520px, 100vw" priority />
+          <div className={`pdp-gallery__frame${shown?.kind === "video" ? " is-video" : ""}`}>
+            {shown?.kind === "video" ? (
+              // Selected by the shopper, so it starts playing in TikTok's own player.
+              <TikTokPlayer key={shown.video.id} videoId={shown.video.id} title={shown.video.title} />
+            ) : (
+              <ProductImage src={shown?.src} alt={product.title} sizes="(min-width: 900px) 520px, 100vw" priority />
+            )}
           </div>
         </div>
-        {images.length > 1 && (
+        {media.length > 1 && (
           <div className="pdp-gallery__thumbs" role="group" aria-label={t.product.gallery}>
-            {images.map((src, i) => (
+            {media.map((item, i) => (
               <button
-                key={src}
+                key={item.kind === "image" ? item.src : item.video.id}
                 type="button"
-                className={`pdp-gallery__thumb${i === imageIndex ? " is-active" : ""}`}
-                onClick={() => setImageIndex(i)}
-                aria-label={fmt(t.product.showImage, { n: i + 1 })}
-                aria-pressed={i === imageIndex}
+                className={`pdp-gallery__thumb${i === mediaIndex ? " is-active" : ""}${item.kind === "video" ? " is-video" : ""}`}
+                onClick={() => setMediaIndex(i)}
+                aria-label={
+                  item.kind === "image"
+                    ? fmt(t.product.showImage, { n: i + 1 })
+                    : `${t.product.playVideo}: ${fmt(t.product.views, { n: formatViews(item.video.views) })}`
+                }
+                aria-pressed={i === mediaIndex}
               >
-                <ProductImage src={src} alt="" sizes="80px" />
+                <ProductImage src={item.kind === "image" ? item.src : item.video.cover} alt="" sizes="80px" />
+                {item.kind === "video" && (
+                  <span className="pdp-gallery__views">
+                    <PlayIcon size={10} /> {formatViews(item.video.views)}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -156,15 +180,9 @@ export function ProductHero({ product }: { product: HeroProduct }) {
             </legend>
             <div className="options__list">
               {product.skus.map((s) => (
-                <label key={s.id} className={`option${s.stock <= 0 ? " is-disabled" : ""}`}>
-                  <input
-                    type="radio"
-                    name="sku"
-                    value={s.id}
-                    checked={s.id === sku.id}
-                    disabled={s.stock <= 0}
-                    onChange={() => selectSku(s.id)}
-                  />
+                <label key={s.id} className={`option${s.stock <= 0 ? " is-soldout" : ""}`}>
+                  {/* Sold-out variants stay selectable so shoppers can still see them. */}
+                  <input type="radio" name="sku" value={s.id} checked={s.id === sku.id} onChange={() => selectSku(s.id)} />
                   <span>{s.name}</span>
                 </label>
               ))}
@@ -180,6 +198,7 @@ export function ProductHero({ product }: { product: HeroProduct }) {
         )}
 
         <div className="pdp-buy__actions">{buttons}</div>
+        {soldOut && <p className="alert alert--warning small">{t.product.soldOutHint}</p>}
 
         <a className="btn btn--tiktok btn--block" href={tiktokProductUrl(product.tiktokProductId)} target="_blank" rel="noopener">
           <TikTokIcon size={18} /> {t.product.buyOnTikTok}

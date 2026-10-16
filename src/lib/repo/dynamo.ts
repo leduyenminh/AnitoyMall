@@ -12,7 +12,7 @@ import {
   type TransactWriteCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { config } from "../config";
-import type { Order, Product, Sku, SyncState } from "../types";
+import type { Order, Product, Sku, SyncState, TikTokVideo } from "../types";
 import {
   ConflictError,
   DuplicateOrderError,
@@ -24,6 +24,7 @@ import {
 // Single-table design:
 //   Product  PK=PRODUCT#<id>  SK=PRODUCT  GSI1PK=PRODUCT  GSI1SK=<slug>        (list + slug lookup)
 //   Order    PK=ORDER#<id>    SK=ORDER    GSI1PK=ORDER    GSI1SK=<createdAt>   (newest first)
+//   Video    PK=VIDEO#<id>    SK=VIDEO    GSI1PK=VIDEO    GSI1SK=<id>          (TikTok covers + views)
 //   Event    PK=EVENT#<id>    SK=EVENT    expiresAt=<epoch seconds>            (webhook dedupe, TTL)
 //   Sync     PK=SYNC#tiktok   SK=STATE
 //
@@ -50,6 +51,9 @@ function fromItem(item: Record<string, unknown>): Product {
     .map(({ position: _position, ...sku }) => sku);
   return { ...(rest as unknown as Omit<Product, "skus">), skus: ordered };
 }
+
+const stripKeys = <T>({ PK: _pk, SK: _sk, GSI1PK: _g1, GSI1SK: _g2, ...rest }: Record<string, unknown>) =>
+  rest as unknown as T;
 
 function orderItem(order: Order): Record<string, unknown> {
   return { PK: `ORDER#${order.id}`, SK: "ORDER", GSI1PK: "ORDER", GSI1SK: order.createdAt, ...order };
@@ -144,23 +148,25 @@ export class DynamoRepository implements Repository {
     return res.Items?.[0] ? fromItem(res.Items[0]) : null;
   }
 
-  async getProducts(ids: string[]): Promise<Product[]> {
-    const unique = [...new Set(ids)];
-    const found: Product[] = [];
-    for (let i = 0; i < unique.length; i += 100) {
-      let keys: Record<string, unknown>[] | undefined = unique
-        .slice(i, i + 100)
-        .map((id) => ({ PK: `PRODUCT#${id}`, SK: "PRODUCT" }));
-      // Retry unprocessed keys (throttling) a few times.
-      for (let attempt = 0; keys?.length && attempt < 5; attempt++) {
+  /** BatchGet in chunks of 100, retrying unprocessed keys (throttling) a few times. */
+  private async batchGet(keys: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
+    const found: Record<string, unknown>[] = [];
+    for (let i = 0; i < keys.length; i += 100) {
+      let pending: Record<string, unknown>[] | undefined = keys.slice(i, i + 100);
+      for (let attempt = 0; pending?.length && attempt < 5; attempt++) {
         const res: BatchGetCommandOutput = await this.db.send(
-          new BatchGetCommand({ RequestItems: { [this.table]: { Keys: keys } } }),
+          new BatchGetCommand({ RequestItems: { [this.table]: { Keys: pending } } }),
         );
-        found.push(...(res.Responses?.[this.table] ?? []).map(fromItem));
-        keys = res.UnprocessedKeys?.[this.table]?.Keys;
+        found.push(...(res.Responses?.[this.table] ?? []));
+        pending = res.UnprocessedKeys?.[this.table]?.Keys;
       }
     }
     return found;
+  }
+
+  async getProducts(ids: string[]): Promise<Product[]> {
+    const items = await this.batchGet([...new Set(ids)].map((id) => ({ PK: `PRODUCT#${id}`, SK: "PRODUCT" })));
+    return items.map(fromItem);
   }
 
   async putProduct(product: Product): Promise<void> {
@@ -256,6 +262,34 @@ export class DynamoRepository implements Repository {
     } catch (error) {
       if (isConditionalFailure(error)) throw new ConflictError(`Order ${order.id} was modified concurrently`);
       throw error;
+    }
+  }
+
+  async listVideos(): Promise<TikTokVideo[]> {
+    const items = await this.queryAll({
+      TableName: this.table,
+      IndexName: GSI1,
+      KeyConditionExpression: "GSI1PK = :pk",
+      ExpressionAttributeValues: { ":pk": "VIDEO" },
+    });
+    return items.map((item) => stripKeys<TikTokVideo>(item));
+  }
+
+  async getVideos(ids: string[]): Promise<TikTokVideo[]> {
+    const items = await this.batchGet([...new Set(ids)].map((id) => ({ PK: `VIDEO#${id}`, SK: "VIDEO" })));
+    const byId = new Map(items.map((item) => [item.id as string, stripKeys<TikTokVideo>(item)]));
+    return ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+  }
+
+  async putVideos(videos: TikTokVideo[]): Promise<void> {
+    for (let i = 0; i < videos.length; i += 25) {
+      await this.db.send(
+        new TransactWriteCommand({
+          TransactItems: videos.slice(i, i + 25).map((video) => ({
+            Put: { TableName: this.table, Item: { PK: `VIDEO#${video.id}`, SK: "VIDEO", GSI1PK: "VIDEO", GSI1SK: video.id, ...video } },
+          })),
+        }),
+      );
     }
   }
 

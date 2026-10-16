@@ -6,8 +6,10 @@ E-commerce website for **[Mall of Anitoy (@leduyenminh)](https://www.tiktok.com/
 - **Vietnamese first, English second**: `/` is Vietnamese, `/en` is English. Prices are in VND, addresses use the 34 provinces in place since 1 July 2025, and payment is COD plus VietQR bank transfer.
 - **Built for selling**: pages are CDN-cached and incrementally regenerated, images go through AVIF/WebP optimisation, and pages carry JSON-LD (Product, Breadcrumb, FAQ, OnlineStore), a sitemap and hreflang. The shop also has instant search and filters, a free-shipping progress meter, low-stock badges, quick-add, a sticky mobile buy bar, guest checkout and click-to-play TikTok videos.
 - **TikTok Shop integration**: the catalog and inventory sync from TikTok Shop, website orders update TikTok inventory, and TikTok orders update website stock through webhooks. Every product has a "Buy on TikTok Shop" link, and conversions are reported through the TikTok Pixel (after consent) and the Events API.
+- **The shop's own TikTok videos on every product**: product photos are the shop's video covers, each product shows its videos with TikTok's view counts, and cards carry a "▶ views" badge that opens a preview. Videos always play in **TikTok's official embed player**, the only way a play on this site can reach TikTok's own counters (a re-hosted copy never would). TikTok does not document whether embedded plays are added to the public count. View counts on the site are refreshed from the TikTok Display API once the account is connected.
+- **Sold-out items stay listed**, marked "Hết hàng" and still browsable, with a pointer to TikTok Shop.
 
-> **Before launch:** the starter catalog in `src/data/seed-products.ts` is placeholder data. It is modelled on the shop's TikTok videos, but prices, stock and descriptions are illustrative and the images are original chibi illustrations. Connect TikTok Shop and run a sync to replace it with the real listings. Also review the shipping and returns wording in `src/i18n/dictionaries/*.ts`.
+> **Before launch:** the starter catalog in `src/data/seed-products.ts` is built from the 72 videos on @leduyenminh: product photos are the video covers and the view counts are TikTok's numbers on 16 Oct 2026. Prices, stock and descriptions are placeholders (older lines are set to sold out). Connect TikTok Shop and run a sync to replace them with the real listings and listing photos. Also review the shipping and returns wording in `src/i18n/dictionaries/*.ts`.
 
 ---
 
@@ -86,7 +88,7 @@ Other commands:
 | --- | --- |
 | `npm run check` | Lint, typecheck and unit tests |
 | `npm run build && npm start` | Production build |
-| `npm run art` | Regenerate the sample illustrations and favicon |
+| `npm run media <folder>` | Rebuild product photos, video posters and icons from downloaded TikTok covers + avatar |
 | `npm run sync` | Run a TikTok Shop sync from the CLI, using `.env.local` |
 | `docker compose up --build` then `npm run db:init` | Production container plus DynamoDB Local |
 
@@ -137,6 +139,17 @@ aws secretsmanager get-secret-value --secret-id <AdminSecretArn> --query SecretS
 6. Optional: create a **TikTok Pixel** in TikTok Ads Manager. Put its id in `NEXT_PUBLIC_TIKTOK_PIXEL_ID` and an Events API token in `eventsAccessToken`.
 
 For local development, put `TIKTOK_APP_KEY`, `TIKTOK_APP_SECRET` and `TIKTOK_SERVICE_ID` in `.env.local`. Tokens are saved to `.data/tiktok.json`.
+
+## Connect the TikTok account (video view counts)
+
+View counts and new videos come from the **TikTok Display API**, a separate app from TikTok Shop:
+
+1. In **[TikTok for Developers](https://developers.tiktok.com)**, create an app with **Login Kit** and the **Display API** (scopes `user.info.basic` and `video.list`).
+2. Set its redirect URI to `https://<site>/api/admin/tiktok/videos/callback`.
+3. Add `displayClientKey` and `displayClientSecret` to the TikTok secret (or `TIKTOK_DISPLAY_CLIENT_KEY` / `TIKTOK_DISPLAY_CLIENT_SECRET` in `.env.local`).
+4. In `/admin`, click **Connect TikTok account** and sign in as @leduyenminh. Views refresh on every sync (every 15 minutes); new videos appear on the home page, with their covers copied to S3.
+
+New videos are not linked to products automatically: add their ids to a product's `tiktokVideoIds`.
 
 ## Project structure
 

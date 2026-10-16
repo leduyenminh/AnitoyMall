@@ -1,8 +1,9 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { seedProducts } from "@/data/seed-products";
+import { seedVideos } from "@/data/tiktok-videos";
 import { config } from "../config";
-import type { Order, Product, SyncState } from "../types";
+import type { Order, Product, SyncState, TikTokVideo } from "../types";
 import {
   ConflictError,
   DuplicateOrderError,
@@ -15,9 +16,13 @@ import {
 // separate module instances Next creates in dev (pages, route handlers) always agree, and writes
 // are serialised through a process-wide lock.
 
+/** Bump when the seed catalog changes shape; older dev stores get the new catalog (orders are kept). */
+const STORE_VERSION = 2;
+
 interface StoreFile {
-  version: 1;
+  version: number;
   products: Record<string, Product>;
+  videos: Record<string, TikTokVideo>;
   orders: Record<string, Order>;
   events: Record<string, number>;
   sync: SyncState;
@@ -37,9 +42,17 @@ const clone = <T>(value: T): T => structuredClone(value);
 export class LocalRepository implements Repository {
   private readonly file = path.resolve(config.localDataDir, "store.json");
 
+  private seedCatalog(): Pick<StoreFile, "products" | "videos"> {
+    return {
+      products: Object.fromEntries(seedProducts.map((p) => [p.id, clone(p)])),
+      videos: Object.fromEntries(seedVideos.map((v) => [v.id, clone(v)])),
+    };
+  }
+
   private async read(attempt = 0): Promise<StoreFile> {
     try {
-      return JSON.parse(await readFile(this.file, "utf8")) as StoreFile;
+      const store = JSON.parse(await readFile(this.file, "utf8")) as StoreFile;
+      return store.version === STORE_VERSION ? store : { ...store, ...this.seedCatalog(), version: STORE_VERSION };
     } catch (error) {
       // A concurrent writer on Windows/synced folders can expose a half-written file; retry briefly.
       if (error instanceof SyntaxError && attempt < 3) {
@@ -48,8 +61,8 @@ export class LocalRepository implements Repository {
       }
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       return {
-        version: 1,
-        products: Object.fromEntries(seedProducts.map((p) => [p.id, clone(p)])),
+        version: STORE_VERSION,
+        ...this.seedCatalog(),
         orders: {},
         events: {},
         sync: {},
@@ -177,6 +190,21 @@ export class LocalRepository implements Repository {
   releaseEvent(eventId: string): Promise<void> {
     return this.mutate((store) => {
       delete store.events[eventId];
+    });
+  }
+
+  async listVideos(): Promise<TikTokVideo[]> {
+    return Object.values((await this.read()).videos);
+  }
+
+  async getVideos(ids: string[]): Promise<TikTokVideo[]> {
+    const store = await this.read();
+    return ids.map((id) => store.videos[id]).filter((v): v is TikTokVideo => Boolean(v));
+  }
+
+  putVideos(videos: TikTokVideo[]): Promise<void> {
+    return this.mutate((store) => {
+      for (const video of videos) store.videos[video.id] = clone(video);
     });
   }
 

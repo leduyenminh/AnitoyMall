@@ -1,4 +1,4 @@
-import type { Order, Product, SyncState } from "../types";
+import type { Order, Product, SyncState, TikTokVideo } from "../types";
 
 export interface StockLine {
   productId: string;
@@ -47,6 +47,11 @@ export interface Repository {
   listOrders(limit?: number): Promise<Order[]>;
   /** Replace an order, failing with ConflictError if it changed since `expectedUpdatedAt`. */
   saveOrder(order: Order, expectedUpdatedAt: string): Promise<void>;
+
+  /** The shop's TikTok videos (covers + view counts). */
+  listVideos(): Promise<TikTokVideo[]>;
+  getVideos(ids: string[]): Promise<TikTokVideo[]>;
+  putVideos(videos: TikTokVideo[]): Promise<void>;
 
   /** Record that an event was handled. Returns false if it had already been claimed (dedupe). */
   claimEvent(eventId: string, ttlSeconds: number): Promise<boolean>;

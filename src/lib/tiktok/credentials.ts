@@ -24,6 +24,18 @@ export interface TikTokCredentials {
   shopRegion?: string;
   sellerName?: string;
   connectedAt?: string;
+
+  // TikTok for Developers app (Login Kit + Display API) that reads the creator's own videos and
+  // their view counts. Separate from the TikTok Shop app above.
+  displayClientKey?: string;
+  displayClientSecret?: string;
+  displayAccessToken?: string;
+  /** Unix seconds. */
+  displayAccessTokenExpiresAt?: number;
+  displayRefreshToken?: string;
+  displayRefreshTokenExpiresAt?: number;
+  displayOpenId?: string;
+  displayConnectedAt?: string;
 }
 
 const CACHE_MS = 60_000;
@@ -57,6 +69,8 @@ export async function loadCredentials({ fresh = false } = {}): Promise<TikTokCre
     appSecret: config.tiktok.appSecret ?? stored.appSecret,
     serviceId: config.tiktok.serviceId ?? stored.serviceId,
     eventsAccessToken: config.tiktok.eventsAccessToken ?? stored.eventsAccessToken,
+    displayClientKey: config.tiktok.displayClientKey ?? stored.displayClientKey,
+    displayClientSecret: config.tiktok.displayClientSecret ?? stored.displayClientSecret,
   };
   cache = { value, at: Date.now() };
   return value;

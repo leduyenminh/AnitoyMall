@@ -4,7 +4,7 @@ import { ProductCard } from "@/components/product/product-card";
 import { ProductHero } from "@/components/product/product-hero";
 import { TikTokVideo } from "@/components/product/tiktok-video";
 import { Breadcrumbs, JsonLd } from "@/components/seo";
-import { getDictionary } from "@/i18n";
+import { fmt, getDictionary } from "@/i18n";
 import { isLocale, localePath } from "@/i18n/config";
 import {
   collectionName,
@@ -16,9 +16,10 @@ import {
   skuName,
   totalStock,
 } from "@/lib/catalog";
-import { getActiveProducts, getProductBySlug } from "@/lib/data";
+import { getActiveProducts, getProductBySlug, getVideoMap } from "@/lib/data";
 import { fromMinorUnits, formatMoney } from "@/lib/money";
 import { site } from "@/lib/site";
+import { formatViews, productVideos, toVideoCard, totalViews } from "@/lib/videos";
 
 export const revalidate = 120;
 
@@ -69,6 +70,8 @@ export default async function ProductPage({ params }: Props) {
   const description = productDescription(product, lang);
   const attributes = productAttributes(product, lang);
   const related = relatedProducts(await getActiveProducts(), product);
+  const videoMap = await getVideoMap();
+  const videos = productVideos(product, videoMap);
   const { min, max } = priceRange(product);
   const url = `${site.url}${href(`/products/${slug}`)}`;
 
@@ -91,6 +94,7 @@ export default async function ProductPage({ params }: Props) {
           collectionLabel: collectionName(product.collection, lang),
           images: product.images,
           tiktokProductId: product.tiktokProductId,
+          videos: videos.map(toVideoCard),
           skus: product.skus.map((s) => ({
             id: s.id,
             name: skuName(product, s, lang),
@@ -134,12 +138,19 @@ export default async function ProductPage({ params }: Props) {
         )}
       </div>
 
-      {product.tiktokVideoIds.length > 0 && (
+      {videos.length > 0 && (
         <section className="section">
-          <h2 className="section__title">{t.product.videos}</h2>
+          <div className="section__head">
+            <div>
+              <h2 className="section__title">{t.product.videos}</h2>
+              <p className="muted">
+                {fmt(t.product.videoViewsTotal, { n: formatViews(totalViews(videos)), count: videos.length })} · {t.product.officialPlayer}
+              </p>
+            </div>
+          </div>
           <div className="video-grid">
-            {product.tiktokVideoIds.slice(0, 4).map((id) => (
-              <TikTokVideo key={id} videoId={id} poster={product.images[0]} title={title} />
+            {videos.slice(0, 8).map((video) => (
+              <TikTokVideo key={video.id} video={toVideoCard(video)} />
             ))}
           </div>
         </section>
@@ -150,7 +161,7 @@ export default async function ProductPage({ params }: Props) {
           <h2 className="section__title">{t.product.related}</h2>
           <div className="product-grid">
             {related.map((p) => (
-              <ProductCard key={p.id} product={p} lang={lang} t={t} />
+              <ProductCard key={p.id} product={p} lang={lang} t={t} videos={videoMap} />
             ))}
           </div>
         </section>
