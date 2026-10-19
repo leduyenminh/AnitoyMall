@@ -151,7 +151,7 @@ The stack prints `SiteUrl`, `TikTokWebhookUrl`, `TikTokRedirectUrl`, `TikTokSecr
 aws secretsmanager get-secret-value --secret-id <AdminSecretArn> --query SecretString --output text
 ```
 
-**CI/CD:** `.github/workflows/ci.yml` runs lint, typecheck, tests, build and `cdk synth`. `.github/workflows/deploy.yml` deploys `main` using GitHub OIDC; set the `AWS_DEPLOY_ROLE_ARN` secret and the repository variables listed in the file.
+**CI/CD:** `.github/workflows/ci.yml` runs lint, typecheck, tests, build and `cdk synth`. `.github/workflows/deploy.yml` deploys `master` using GitHub OIDC; set the `AWS_DEPLOY_ROLE_ARN` secret and the repository variables listed in the file.
 
 ## Connect TikTok Shop
 
