@@ -22,5 +22,7 @@ export default defineConfig([
     "next-env.d.ts",
     "cdk.out/**",
     "infra/**",
+    // Claude Code worktrees (full checkouts with their own builds).
+    ".claude/**",
   ]),
 ]);

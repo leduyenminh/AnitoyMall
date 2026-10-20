@@ -37,6 +37,7 @@ export function Win95Taskbar() {
     { href: href("/"), label: t.nav.home, icon: "🏠" },
     { href: href("/shop"), label: t.nav.shop, icon: "🛍️" },
     { href: href("/cart"), label: t.nav.cart, icon: "🧺" },
+    { href: href("/order"), label: t.nav.trackOrder, icon: "📦" },
     { href: href("/about"), label: t.nav.about, icon: "📄" },
     { href: href("/help"), label: t.nav.help, icon: "❓" },
   ];

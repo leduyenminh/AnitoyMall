@@ -2,7 +2,7 @@ import { randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { provinces } from "./checkout/provinces";
 import { buildQuote, type Quote } from "./checkout/quote";
-import { isValidEmail, normalisePhone } from "./checkout/validation";
+import { isOrderCode, isValidEmail, normaliseOrderCode, normalisePhone } from "./checkout/validation";
 import { publish } from "./events/publish";
 import { log } from "./log";
 import { ConflictError, DuplicateOrderError, getRepository, OutOfStockError } from "./repo";
@@ -213,12 +213,79 @@ export async function expireUnpaidOrders(maxAgeMinutes = 45, now = new Date()): 
 
 /** Orders hold personal data, so viewing one requires the random token from the confirmation link. */
 export async function getOrderForViewer(id: string, token: string | undefined): Promise<Order | null> {
-  if (!token || !/^AT[A-Z0-9]{7}$/.test(id)) return null;
+  if (!token || !isOrderCode(id)) return null;
   const order = await (await getRepository()).getOrder(id);
   if (!order) return null;
   const a = Buffer.from(order.accessToken);
   const b = Buffer.from(token);
   return a.length === b.length && timingSafeEqual(a, b) ? order : null;
+}
+
+/** What "find my order" shows: status and items, with the contact details masked and no address or token. */
+export interface OrderLookup {
+  id: string;
+  status: OrderStatus;
+  paymentMethod: Order["paymentMethod"];
+  paymentStatus: Order["paymentStatus"];
+  currency: string;
+  lines: { slug: string; title: string; skuName: string; image?: string; quantity: number; lineTotal: number }[];
+  subtotal: number;
+  discount?: number;
+  shippingFee: number;
+  total: number;
+  history: { status: Order["history"][number]["status"]; at: string }[];
+  customer: { name: string; phone: string };
+  province: string;
+  createdAt: string;
+}
+
+export function maskName(name: string): string {
+  const chars = Array.from(name.trim());
+  return `${chars.slice(0, chars.length > 2 ? 2 : 1).join("")}***`;
+}
+
+export function maskPhone(phone: string): string {
+  return phone.length < 6 ? "***" : `${phone.slice(0, 2)}${"*".repeat(phone.length - 4)}${phone.slice(-2)}`;
+}
+
+/**
+ * Order lookup by code + phone for shoppers who lost their order link. A wrong code and a wrong
+ * phone look the same to the caller, and the result never includes the address, email or token.
+ */
+export async function lookupOrder(code: string, phoneInput: string): Promise<OrderLookup | null> {
+  const id = normaliseOrderCode(code);
+  const phone = normalisePhone(phoneInput);
+  const order = phone && isOrderCode(id) ? await (await getRepository()).getOrder(id) : null;
+  const a = Buffer.from(order?.customer.phone ?? "");
+  const b = Buffer.from(phone ?? "");
+  if (!order || a.length !== b.length || !timingSafeEqual(a, b)) {
+    log.info("order.lookup_failed", { id: id.slice(0, 12) });
+    return null;
+  }
+  return {
+    id: order.id,
+    status: order.status,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    currency: order.currency,
+    lines: order.lines.map((l) => ({
+      slug: l.slug,
+      title: l.title,
+      skuName: l.skuName,
+      ...(l.image ? { image: l.image } : {}),
+      quantity: l.quantity,
+      lineTotal: l.lineTotal,
+    })),
+    subtotal: order.subtotal,
+    ...(order.discount ? { discount: order.discount } : {}),
+    shippingFee: order.shippingFee,
+    total: order.total,
+    // Seller notes can mention the customer, so only the status changes are shown.
+    history: order.history.map((h) => ({ status: h.status, at: h.at })),
+    customer: { name: maskName(order.customer.name), phone: maskPhone(order.customer.phone) },
+    province: order.shippingAddress.province,
+    createdAt: order.createdAt,
+  };
 }
 
 export type OrderAction = "confirm" | "mark_paid" | "ship" | "deliver" | "cancel";
