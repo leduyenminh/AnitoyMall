@@ -1,10 +1,12 @@
 import { locales, localePath } from "@/i18n/config";
 import { config } from "./config";
+import { googleFeedPaths } from "./feeds/google";
 
 /** Storefront paths that render a product's data. */
 export function productPaths(slugs: string[]): string[] {
   const paths = new Set<string>(["/sitemap.xml"]);
   for (const locale of locales) {
+    paths.add(googleFeedPaths[locale]);
     paths.add(localePath(locale, "/"));
     paths.add(localePath(locale, "/shop"));
     for (const slug of slugs) paths.add(localePath(locale, `/products/${slug}`));

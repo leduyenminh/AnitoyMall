@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { fmt } from "@/i18n";
 import { formatMoney } from "@/lib/money";
 import { site, tiktokProductUrl } from "@/lib/site";
@@ -41,15 +41,33 @@ export interface HeroProduct {
 
 type Media = { kind: "image"; src: string } | { kind: "video"; video: VideoCard };
 
+const noSubscription = () => () => {};
+
+/**
+ * `?sku=` from a shopping feed or shared link. Read only in the browser (null while rendering on
+ * the server and hydrating), so the page itself stays cacheable.
+ */
+function useRequestedSkuId(): string | null {
+  return useSyncExternalStore(
+    noSubscription,
+    () => new URLSearchParams(window.location.search).get("sku"),
+    () => null,
+  );
+}
+
 /** Gallery and buy box: everything on the product page that reacts to the shopper. */
 export function ProductHero({ product }: { product: HeroProduct }) {
   const { t, lang, href } = useI18n();
   const { add } = useCart();
   const router = useRouter();
-  const initial = product.skus.find((s) => s.stock > 0) ?? product.skus[0];
-  const [skuId, setSkuId] = useState(initial?.id);
+  const fallback = product.skus.find((s) => s.stock > 0) ?? product.skus[0];
+  const requestedId = useRequestedSkuId();
+  const requested = product.skus.find((s) => s.id === requestedId);
+  const initial = requested ?? fallback;
+  // The shopper's own picks; until then the page shows `initial`.
+  const [skuId, setSkuId] = useState<string>();
   const [quantity, setQuantity] = useState(1);
-  const [mediaIndex, setMediaIndex] = useState(0);
+  const [pickedMedia, setMediaIndex] = useState<number>();
   const [added, setAdded] = useState(false);
 
   const sku = product.skus.find((s) => s.id === skuId) ?? initial;
@@ -58,14 +76,15 @@ export function ProductHero({ product }: { product: HeroProduct }) {
     ...images.map((src) => ({ kind: "image" as const, src })),
     ...product.videos.map((video) => ({ kind: "video" as const, video })),
   ];
+  const mediaIndex = pickedMedia ?? (requested?.image ? Math.max(0, images.indexOf(requested.image)) : 0);
   const shown = media[mediaIndex] ?? media[0];
 
   useEffect(() => {
     trackPixel("ViewContent", {
-      contents: [{ content_id: product.id, content_name: product.title, price: initial?.price }],
-      value: initial?.price,
+      contents: [{ content_id: product.id, content_name: product.title, price: fallback?.price }],
+      value: fallback?.price,
     });
-  }, [product.id, product.title, initial?.price]);
+  }, [product.id, product.title, fallback?.price]);
 
   if (!sku) return null;
   const soldOut = sku.stock <= 0;

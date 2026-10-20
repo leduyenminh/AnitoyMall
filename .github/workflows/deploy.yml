@@ -58,4 +58,5 @@ jobs:
           NEXT_PUBLIC_CONTACT_PHONE: ${{ vars.NEXT_PUBLIC_CONTACT_PHONE }}
           NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
           NEXT_PUBLIC_CONTACT_ZALO: ${{ vars.NEXT_PUBLIC_CONTACT_ZALO }}
+          NEXT_PUBLIC_RETURN_DAYS: ${{ vars.NEXT_PUBLIC_RETURN_DAYS }}
         run: npx cdk deploy --require-approval never --outputs-file cdk-outputs.json
