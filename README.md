@@ -180,12 +180,30 @@ View counts and new videos come from the **TikTok Display API**, a separate app 
 
 New videos are not linked to products automatically: add their ids to a product's `tiktokVideoIds`.
 
+## Google Shopping (Merchant Center)
+
+The site serves a Merchant Center product feed at `/feeds/google.xml` (Vietnamese) and `/feeds/google-en.xml` (English). Each SKU is one item, and variants share an `item_group_id`. Sold-out SKUs stay in the feed as `out_of_stock`. Product pages carry matching structured data (price, stock, shipping, return policy). This is what Google Shopping free listings and AI Mode shopping answers read.
+
+> **Submit the feed only after a real TikTok Shop sync.** The seed catalog's prices and stock are placeholders. Open `https://<site>/feeds/google.xml` first and check the prices.
+
+The return policy sent to Google comes from `NEXT_PUBLIC_RETURN_DAYS`. Leave it unset if you only replace items that arrive damaged; Google then shows "no returns". Set it to a number of days if you accept exchanges for that long. Whatever you choose, use the same policy in Merchant Center.
+
+1. **Verify the site in [Google Search Console](https://search.google.com/search-console).** Add a **Domain** property for your domain and add the DNS TXT record it gives you (in Route 53 or at your registrar). If you can't edit DNS, add a **URL prefix** property and use the HTML file method: put Google's file in `public/` and deploy. Then submit `https://<site>/sitemap.xml` under **Sitemaps**.
+2. **Create a [Merchant Center](https://merchants.google.com) account** with business country **Vietnam**. In **Settings → Business info → Website**, enter the site URL and verify and claim it. Choose the Search Console option, which uses the property from step 1.
+3. **Set up shipping and returns** in **Settings → Shipping and returns** to match the site. Shipping: Vietnam, VND, 30.000đ flat, free from 150.000đ, delivered in 2–5 days (or your `NEXT_PUBLIC_SHIPPING_FEE`, `NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD` and `NEXT_PUBLIC_DELIVERY_ETA` values). Returns: the policy chosen above.
+4. **Add the feed:** **Products → Add products → Add products from a file → Add a file link.** Enter `https://<site>/feeds/google.xml`, country **Vietnam**, language **Vietnamese**, currency **VND**, and a daily fetch. If Merchant Center offers English for Vietnam, you can add `/feeds/google-en.xml` as a second source.
+5. **Turn on free listings** (**Marketing → Google surfaces** or **Growth → Manage programs**, depending on the account). Keep **automatic item updates** on, so Google corrects price and stock from the product pages between fetches.
+6. **Check for problems after the first fetch:** **Products → Needs attention** in Merchant Center, and **Shopping → Merchant listings** in Search Console. Google's [Rich Results Test](https://search.google.com/test/rich-results) checks a single product page.
+
+Merchant Center fetches the feed from its URL, so the feed is not listed in `robots.txt` or the sitemap. Catalog syncs purge the feed from CloudFront together with the product pages.
+
 ## Project structure
 
 ```
 src/
   app/[lang]/…          pages (home, shop, product, cart, checkout, order, about, help, admin)
   app/api/…             orders, cart quote, payment return/IPN, TikTok webhook, admin (sync, orders, promotions, OAuth)
+  app/feeds/…           Google Merchant Center product feeds
   proxy.ts              locale routing, admin Basic auth, CloudFront origin verification
   components/           UI (cart, catalog, product, theme picker, Win95 taskbar, pixel/consent)
   i18n/                 vi/en dictionaries and locale helpers
@@ -195,6 +213,9 @@ src/
     checkout/           quoting, validation, provinces
     events/             SQS publish and idempotent handlers
     payments/           ZaloPay, MoMo and VNPay gateways (signing, verification)
+    feeds/              Google Merchant Center feed builder
+    merchant.ts         shipping, returns, URLs and images shared by the feed and structured data
+    structured-data.ts  Product / ProductGroup JSON-LD for product pages
     promotions.ts       live campaigns and voucher rules
     orders.ts           checkout and order workflow
   styles/               design tokens and the Win95 / Aero theme layers

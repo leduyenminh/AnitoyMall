@@ -14,11 +14,11 @@ import {
   productTitle,
   relatedProducts,
   skuName,
-  totalStock,
 } from "@/lib/catalog";
 import { getActiveProducts, getProductBySlug, getVideoMap } from "@/lib/data";
-import { fromMinorUnits, formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { site } from "@/lib/site";
+import { productJsonLd } from "@/lib/structured-data";
 import { formatViews, productVideos, toVideoCard, totalViews } from "@/lib/videos";
 
 export const revalidate = 120;
@@ -72,7 +72,6 @@ export default async function ProductPage({ params }: Props) {
   const related = relatedProducts(await getActiveProducts(), product);
   const videoMap = await getVideoMap();
   const videos = productVideos(product, videoMap);
-  const { min, max } = priceRange(product);
   const url = `${site.url}${href(`/products/${slug}`)}`;
 
   return (
@@ -168,31 +167,7 @@ export default async function ProductPage({ params }: Props) {
         </section>
       )}
 
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "Product",
-          name: title,
-          description,
-          sku: product.skus[0]?.sellerSku ?? product.id,
-          image: product.images.map(absolute),
-          brand: { "@type": "Brand", name: site.name },
-          category: collectionName(product.collection, lang),
-          url,
-          ...(product.rating
-            ? { aggregateRating: { "@type": "AggregateRating", ratingValue: product.rating.value, reviewCount: product.rating.count } }
-            : {}),
-          offers: {
-            "@type": "AggregateOffer",
-            priceCurrency: site.currency,
-            lowPrice: fromMinorUnits(min),
-            highPrice: fromMinorUnits(max),
-            offerCount: product.skus.length,
-            availability: totalStock(product) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-            url,
-          },
-        }}
-      />
+      <JsonLd data={productJsonLd(product, lang)} />
       <JsonLd
         data={{
           "@context": "https://schema.org",

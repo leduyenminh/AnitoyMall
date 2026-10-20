@@ -38,6 +38,14 @@ export const site = {
     /** Typical delivery window in days, shown on product pages. */
     etaDays: process.env.NEXT_PUBLIC_DELIVERY_ETA ?? "2–5",
   },
+  returns: {
+    /**
+     * Days after delivery within which a buyer may send an item back for an exchange, as advertised
+     * to Google. 0 (the default) matches the help page: the shop replaces items that arrive damaged
+     * but takes no other returns, which Google shows as "no returns".
+     */
+    days: num(process.env.NEXT_PUBLIC_RETURN_DAYS, 0),
+  },
   contact: {
     email: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
     phone: process.env.NEXT_PUBLIC_CONTACT_PHONE,
