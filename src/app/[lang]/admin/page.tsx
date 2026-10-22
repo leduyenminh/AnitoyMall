@@ -6,7 +6,8 @@ import { PromotionsEditor } from "@/components/admin/promotions-editor";
 import { isLocale, localePath } from "@/i18n/config";
 import { totalStock } from "@/lib/catalog";
 import { formatMoney } from "@/lib/money";
-import { allowedActions } from "@/lib/orders";
+import { config } from "@/lib/config";
+import { allowedActions, holdExpiresAt, ONLINE_PAYMENT_HOLD_MINUTES } from "@/lib/orders";
 import { enabledPaymentMethods, loadPaymentSettings } from "@/lib/payments/settings";
 import { isLive } from "@/lib/promotions";
 import { getRepository } from "@/lib/repo";
@@ -64,6 +65,8 @@ export default async function AdminPage({
   const active = products.filter((p) => p.status === "active");
   const lowStock = active.filter((p) => totalStock(p) <= 3);
   const pending = orders.filter((o) => o.status === "pending");
+  // When each unconfirmed, unpaid order will be cancelled by the sync worker.
+  const deadlines = new Map(orders.map((o) => [o.id, holdExpiresAt(o)]));
   const tokenExpiry = creds.accessTokenExpiresAt ? dateFmt.format(new Date(creds.accessTokenExpiresAt * 1000)) : "—";
 
   return (
@@ -218,7 +221,9 @@ export default async function AdminPage({
           </dl>
           <p className="muted small">
             Add merchant keys to the payments secret (AWS) or .env.local (local) to switch a method on. Unpaid online orders are
-            released after 45 minutes.
+            cancelled after {ONLINE_PAYMENT_HOLD_MINUTES} minutes. COD and bank-transfer orders are cancelled after{" "}
+            {config.orders.holdHours} hours unless you confirm them (or mark the transfer paid), so unwanted orders cannot keep
+            stock out of sale.
           </p>
         </div>
       </section>
@@ -278,6 +283,12 @@ export default async function AdminPage({
                           {methodLabels[o.paymentMethod]} · {o.paymentStatus}
                           {o.voucherCode ? ` · ${o.voucherCode}` : ""}
                         </span>
+                        {deadlines.get(o.id) && (
+                          <>
+                            <br />
+                            <span className="small">Auto-cancels {dateFmt.format(deadlines.get(o.id)!)}</span>
+                          </>
+                        )}
                       </td>
                       <td>
                         <OrderActions orderId={o.id} actions={allowedActions(o)} />

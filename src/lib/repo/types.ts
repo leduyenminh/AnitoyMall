@@ -45,6 +45,8 @@ export interface Repository {
   placeOrder(order: Order): Promise<void>;
   getOrder(id: string): Promise<Order | null>;
   listOrders(limit?: number): Promise<Order[]>;
+  /** Orders still "pending", created within [createdAfter, createdBefore] (ISO timestamps), oldest first. */
+  listPendingOrders(createdAfter: string, createdBefore: string): Promise<Order[]>;
   /** Replace an order, failing with ConflictError if it changed since `expectedUpdatedAt`. */
   saveOrder(order: Order, expectedUpdatedAt: string): Promise<void>;
 
@@ -63,6 +65,8 @@ export interface Repository {
   isEventClaimed(eventId: string): Promise<boolean>;
   /** Undo a claim so a failed event can be processed again on retry. */
   releaseEvent(eventId: string): Promise<void>;
+  /** Atomically add 1 to a counter and return the new value; the counter is dropped after `expiresAt` (epoch seconds). */
+  incrementCounter(key: string, expiresAt: number): Promise<number>;
   getSyncState(): Promise<SyncState>;
   setSyncState(state: SyncState): Promise<void>;
 }

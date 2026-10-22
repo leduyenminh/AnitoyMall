@@ -8,6 +8,7 @@ import { AnitoyMallStack } from "../lib/anitoy-stack.js";
 //   sesFromEmail     verified SES sender for order emails         (optional)
 //   sellerEmail      where new-order notifications go             (optional)
 //   stage            name suffix, e.g. "prod" or "staging"        (default "prod")
+//   orderHoldHours   hours an unconfirmed COD / bank-transfer order holds stock (default 24)
 const app = new App();
 const ctx = (key: string, envKey: string): string | undefined =>
   (app.node.tryGetContext(key) as string | undefined) ?? process.env[envKey] ?? undefined;
@@ -27,6 +28,7 @@ const stack = new AnitoyMallStack(app, `AnitoyMall-${stage}`, {
   alarmEmail: ctx("alarmEmail", "ANITOY_ALARM_EMAIL"),
   sesFromEmail: ctx("sesFromEmail", "ANITOY_SES_FROM_EMAIL"),
   sellerEmail: ctx("sellerEmail", "ANITOY_SELLER_EMAIL"),
+  orderHoldHours: ctx("orderHoldHours", "ANITOY_ORDER_HOLD_HOURS"),
   // Public storefront settings baked into the browser bundle at build time.
   publicEnv: Object.fromEntries(
     Object.entries(process.env).filter(([key, value]) => key.startsWith("NEXT_PUBLIC_") && value),

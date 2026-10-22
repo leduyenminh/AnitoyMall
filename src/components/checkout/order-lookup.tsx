@@ -52,10 +52,12 @@ export function OrderLookup() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ id: code, phone }),
       });
-      const data = (await res.json().catch(() => ({}))) as { order?: LookupResult };
+      const data = (await res.json().catch(() => ({}))) as { order?: LookupResult; retryAfter?: number };
       if (res.ok && data.order) {
         setResult(data.order);
         requestAnimationFrame(() => resultRef.current?.focus());
+      } else if (res.status === 429) {
+        setFormError(fmt(t.orderLookup.tooMany, { minutes: Math.max(1, Math.ceil((data.retryAfter ?? 60) / 60)) }));
       } else {
         setFormError(res.status === 404 ? t.orderLookup.notFound : t.orderLookup.error);
       }

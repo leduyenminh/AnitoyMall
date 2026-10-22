@@ -27,6 +27,7 @@ import {
 //   Video    PK=VIDEO#<id>    SK=VIDEO    GSI1PK=VIDEO    GSI1SK=<id>          (TikTok covers + views)
 //   Promo    PK=PROMO#<id>    SK=PROMO    GSI1PK=PROMO    GSI1SK=<endsAt>      (campaigns, vouchers)
 //   Event    PK=EVENT#<id>    SK=EVENT    expiresAt=<epoch seconds>            (webhook dedupe, TTL)
+//   Counter  PK=RATE#<key>    SK=RATE     count, expiresAt=<epoch seconds>     (rate limits, TTL)
 //   Sync     PK=SYNC#tiktok   SK=STATE
 //
 // SKUs are stored as a map keyed by SKU id so a single conditional update can decrement stock
@@ -250,6 +251,18 @@ export class DynamoRepository implements Repository {
     return (res.Items ?? []).map(fromOrderItem);
   }
 
+  async listPendingOrders(createdAfter: string, createdBefore: string): Promise<Order[]> {
+    const items = await this.queryAll({
+      TableName: this.table,
+      IndexName: GSI1,
+      KeyConditionExpression: "GSI1PK = :pk AND GSI1SK BETWEEN :from AND :to",
+      FilterExpression: "#status = :pending",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: { ":pk": "ORDER", ":from": createdAfter, ":to": createdBefore, ":pending": "pending" },
+    });
+    return items.map(fromOrderItem);
+  }
+
   async saveOrder(order: Order, expectedUpdatedAt: string): Promise<void> {
     try {
       await this.db.send(
@@ -346,6 +359,20 @@ export class DynamoRepository implements Repository {
 
   async releaseEvent(eventId: string): Promise<void> {
     await this.db.send(new DeleteCommand({ TableName: this.table, Key: { PK: `EVENT#${eventId}`, SK: "EVENT" } }));
+  }
+
+  async incrementCounter(key: string, expiresAt: number): Promise<number> {
+    const res = await this.db.send(
+      new UpdateCommand({
+        TableName: this.table,
+        Key: { PK: `RATE#${key}`, SK: "RATE" },
+        UpdateExpression: "ADD #count :one SET expiresAt = if_not_exists(expiresAt, :expires)",
+        ExpressionAttributeNames: { "#count": "count" },
+        ExpressionAttributeValues: { ":one": 1, ":expires": expiresAt },
+        ReturnValues: "UPDATED_NEW",
+      }),
+    );
+    return Number(res.Attributes?.count ?? 1);
   }
 
   async getSyncState(): Promise<SyncState> {

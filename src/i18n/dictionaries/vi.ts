@@ -179,6 +179,7 @@ export const vi = {
       generic: "Không thể đặt hàng lúc này. Vui lòng thử lại.",
       empty: "Giỏ hàng đang trống.",
       voucher: "Mã giảm giá không còn dùng được. Vui lòng kiểm tra lại.",
+      tooMany: "Bạn đã đặt quá nhiều đơn trong thời gian ngắn. Vui lòng thử lại sau {minutes} phút, hoặc nhắn shop để được hỗ trợ.",
     },
   },
   order: {
@@ -226,6 +227,7 @@ export const vi = {
     searching: "Đang tìm…",
     notFound: "Không tìm thấy đơn hàng với mã và số điện thoại này. Vui lòng kiểm tra lại.",
     error: "Chưa tra cứu được lúc này. Vui lòng thử lại.",
+    tooMany: "Bạn đã tra cứu quá nhiều lần. Vui lòng thử lại sau {minutes} phút.",
     placedBy: "Người đặt",
     masked: "Thông tin liên hệ được ẩn bớt để bảo vệ bạn.",
     recent: "Đơn hàng gần đây trên thiết bị này",

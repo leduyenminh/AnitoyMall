@@ -39,6 +39,8 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
+const localCounters = globalThis as unknown as { __anitoyCounters?: Map<string, { count: number; expiresAt: number }> };
+
 const clone = <T>(value: T): T => structuredClone(value);
 
 export class LocalRepository implements Repository {
@@ -168,6 +170,13 @@ export class LocalRepository implements Repository {
       .slice(0, limit);
   }
 
+  async listPendingOrders(createdAfter: string, createdBefore: string): Promise<Order[]> {
+    const store = await this.read();
+    return Object.values(store.orders)
+      .filter((o) => o.status === "pending" && o.createdAt >= createdAfter && o.createdAt <= createdBefore)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   saveOrder(order: Order, expectedUpdatedAt: string): Promise<void> {
     return this.mutate((store) => {
       if (store.orders[order.id]?.updatedAt !== expectedUpdatedAt) throw new ConflictError(`Order ${order.id} was modified concurrently`);
@@ -194,6 +203,18 @@ export class LocalRepository implements Repository {
     return this.mutate((store) => {
       delete store.events[eventId];
     });
+  }
+
+  // Counters only guard against bursts, so in development they live in memory (shared by the
+  // module instances of one process) instead of being written to the store file.
+  async incrementCounter(key: string, expiresAt: number): Promise<number> {
+    const counters = (localCounters.__anitoyCounters ??= new Map());
+    const now = Date.now() / 1000;
+    for (const [k, c] of counters) if (c.expiresAt < now) counters.delete(k);
+    const counter = counters.get(key) ?? { count: 0, expiresAt };
+    counter.count++;
+    counters.set(key, counter);
+    return counter.count;
   }
 
   async listVideos(): Promise<TikTokVideo[]> {

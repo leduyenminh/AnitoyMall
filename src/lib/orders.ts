@@ -1,6 +1,7 @@
 import { randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { provinces } from "./checkout/provinces";
+import { config } from "./config";
 import { buildQuote, type Quote } from "./checkout/quote";
 import { isOrderCode, isValidEmail, normaliseOrderCode, normalisePhone } from "./checkout/validation";
 import { publish } from "./events/publish";
@@ -188,20 +189,43 @@ export async function recordOnlinePayment(
   throw new ConflictError(`Order ${orderId} kept changing while recording payment`);
 }
 
+/** Shoppers can retry an online payment for this long before the order lets its stock go. */
+export const ONLINE_PAYMENT_HOLD_MINUTES = 45;
+
 /**
- * Cancel online-payment orders that were never paid, returning their stock. Run by the scheduled
- * worker; shoppers can retry payment until then.
+ * When an unpaid order that is still "pending" stops holding stock: online-payment orders after
+ * 45 minutes, COD and bank-transfer orders after `holdHours` unless the seller confirms them (or
+ * marks a transfer paid) first. Undefined when the order no longer expires.
  */
-export async function expireUnpaidOrders(maxAgeMinutes = 45, now = new Date()): Promise<string[]> {
+export function holdExpiresAt(
+  order: Pick<Order, "status" | "paymentStatus" | "paymentMethod" | "createdAt">,
+  holdHours = config.orders.holdHours,
+): Date | undefined {
+  if (order.status !== "pending" || order.paymentStatus !== "unpaid") return undefined;
+  const minutes = isOnlinePayment(order) ? ONLINE_PAYMENT_HOLD_MINUTES : holdHours * 60;
+  return new Date(Date.parse(order.createdAt) + minutes * 60_000);
+}
+
+/**
+ * Cancel unpaid orders past their hold (see holdExpiresAt), returning their stock to the website
+ * and TikTok Shop. Run by the scheduled worker. Without this, orders nobody intends to pay for or
+ * receive (mistakes, or a script) would keep stock out of sale on both channels indefinitely.
+ */
+export async function expireHeldOrders(now = new Date(), holdHours = config.orders.holdHours): Promise<string[]> {
   const repo = await getRepository();
-  const cutoff = now.getTime() - maxAgeMinutes * 60_000;
-  const stale = (await repo.listOrders(200)).filter(
-    (o) => isOnlinePayment(o) && o.paymentStatus === "unpaid" && o.status === "pending" && Date.parse(o.createdAt) < cutoff,
-  );
+  const shortest = Math.min(ONLINE_PAYMENT_HOLD_MINUTES, holdHours * 60) * 60_000;
+  const longest = Math.max(ONLINE_PAYMENT_HOLD_MINUTES, holdHours * 60) * 60_000;
+  // Only orders old enough to have expired; the extra week catches any a failed run left behind.
+  const createdAfter = new Date(now.getTime() - longest - 7 * 24 * 3600_000).toISOString();
+  const createdBefore = new Date(now.getTime() - shortest).toISOString();
+  const stale = (await repo.listPendingOrders(createdAfter, createdBefore)).filter((o) => {
+    const expires = holdExpiresAt(o, holdHours);
+    return expires !== undefined && expires <= now;
+  });
   const expired: string[] = [];
   for (const order of stale) {
     try {
-      await applyOrderAction(order.id, "cancel", "payment_timeout");
+      await applyOrderAction(order.id, "cancel", isOnlinePayment(order) ? "payment_timeout" : "not_confirmed");
       expired.push(order.id);
     } catch (error) {
       log.warn("order.expire_failed", { orderId: order.id, error: String(error) });

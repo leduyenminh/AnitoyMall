@@ -177,6 +177,7 @@ export const en: Dictionary = {
       generic: "We couldn't place your order. Please try again.",
       empty: "Your cart is empty.",
       voucher: "Your voucher can no longer be used. Please review it.",
+      tooMany: "Too many orders from your connection in a short time. Please try again in {minutes} minutes, or message the shop for help.",
     },
   },
   order: {
@@ -224,6 +225,7 @@ export const en: Dictionary = {
     searching: "Searching…",
     notFound: "We couldn't find an order with that code and phone number. Please check and try again.",
     error: "We can't look up orders right now. Please try again.",
+    tooMany: "Too many lookups in a short time. Please try again in {minutes} minutes.",
     placedBy: "Ordered by",
     masked: "Contact details are partly hidden to protect your privacy.",
     recent: "Recent orders on this device",

@@ -1,9 +1,13 @@
-import { clientIp, json, publicOrigin } from "@/lib/http";
+import { clientIp, json, publicOrigin, tooManyRequests } from "@/lib/http";
 import { log } from "@/lib/log";
 import { CheckoutError, createOrder, isOnlinePayment } from "@/lib/orders";
 import { startPayment } from "@/lib/payments";
+import { checkRateLimit, ORDER_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = await checkRateLimit("order", clientIp(request), ORDER_LIMITS);
+  if (limited) return tooManyRequests(limited.retryAfter);
+
   let body: unknown;
   try {
     body = await request.json();
