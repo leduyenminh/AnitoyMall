@@ -42,6 +42,9 @@ export function SiteFooter({ lang, t }: { lang: Locale; t: Dictionary }) {
           <h2 className="site-footer__heading">{t.footer.support}</h2>
           <ul>
             <li>
+              <Link href={href("/order")}>{t.nav.trackOrder}</Link>
+            </li>
+            <li>
               <Link href={`${href("/help")}#faq-0`}>{t.footer.shipping}</Link>
             </li>
             <li>

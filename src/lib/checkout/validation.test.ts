@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatMoney, toMinorUnits } from "../money";
-import { isValidEmail, normalisePhone, phoneToE164 } from "./validation";
+import { isOrderCode, isValidEmail, normaliseOrderCode, normalisePhone, phoneToE164 } from "./validation";
 
 describe("normalisePhone", () => {
   it("accepts common Vietnamese mobile formats", () => {
@@ -18,6 +18,18 @@ describe("normalisePhone", () => {
 
   it("produces E.164 for the Events API", () => {
     expect(phoneToE164("0912345678")).toBe("+84912345678");
+  });
+});
+
+describe("normaliseOrderCode", () => {
+  it("accepts the code with or without AT, in any case, with spaces", () => {
+    expect(normaliseOrderCode("AT3K7PQ2X")).toBe("AT3K7PQ2X");
+    expect(normaliseOrderCode("at3k7pq2x")).toBe("AT3K7PQ2X");
+    expect(normaliseOrderCode("3K7PQ2X")).toBe("AT3K7PQ2X");
+    expect(normaliseOrderCode(" AT 3K7 PQ2X ")).toBe("AT3K7PQ2X");
+    // A 7-character code that itself starts with AT still gets the prefix.
+    expect(normaliseOrderCode("ATXY234")).toBe("ATATXY234");
+    expect(isOrderCode(normaliseOrderCode("3K7PQ"))).toBe(false);
   });
 });
 

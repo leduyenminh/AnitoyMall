@@ -161,6 +161,53 @@ describe("online payments", () => {
   });
 });
 
+describe("lookupOrder", () => {
+  const placeOrder = () =>
+    orders.createOrder(
+      {
+        ...validInput(),
+        items: [{ ...FRIEREN, quantity: 1 }],
+        customer: { name: "Nguyễn Test", phone: "0912 345 678", email: "khach@example.vn" },
+      },
+      {},
+    );
+
+  it("finds an order by code and phone, in any common format", async () => {
+    const order = await placeOrder();
+    const found = await orders.lookupOrder(order.id, "+84 912.345.678");
+    expect(found).toMatchObject({
+      id: order.id,
+      status: "pending",
+      total: order.total,
+      customer: { name: "Ng***", phone: "09******78" },
+      province: "Thành phố Hồ Chí Minh",
+    });
+    expect((await orders.lookupOrder(` ${order.id.slice(2).toLowerCase()} `, "0912345678"))?.id).toBe(order.id);
+  });
+
+  it("never returns the token, address, email or full phone", async () => {
+    const order = await placeOrder();
+    const text = JSON.stringify(await orders.lookupOrder(order.id, "0912345678"));
+    for (const secret of [order.accessToken, "123 Đường Thử Nghiệm", "Phường Bến Thành", "khach@example.vn", "0912345678", "Nguyễn"]) {
+      expect(text).not.toContain(secret);
+    }
+  });
+
+  it("treats a wrong phone, an unknown code and a malformed code alike", async () => {
+    const order = await placeOrder();
+    expect(await orders.lookupOrder(order.id, "0987654321")).toBeNull();
+    expect(await orders.lookupOrder(order.id, "123")).toBeNull();
+    expect(await orders.lookupOrder("AT2222222", "0912345678")).toBeNull();
+    expect(await orders.lookupOrder("not-an-order", "0912345678")).toBeNull();
+  });
+
+  it("masks short names and odd phone numbers", () => {
+    expect(orders.maskName("  Lê ")).toBe("L***");
+    expect(orders.maskName("Minh")).toBe("Mi***");
+    expect(orders.maskPhone("123")).toBe("***");
+  });
+});
+
 describe("local repository", () => {
   it("deduplicates events", async () => {
     expect(await repo.claimEvent("evt-1", 60)).toBe(true);

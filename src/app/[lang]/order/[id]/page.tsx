@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { OrderTimeline } from "@/components/checkout/order-timeline";
 import { OrderTracker } from "@/components/checkout/order-tracker";
 import { PayNowButton } from "@/components/checkout/pay-now-button";
+import { RememberOrder } from "@/components/checkout/remember-order";
 import { ProductImage } from "@/components/product/product-image";
 import { fmt, getDictionary, paymentMethodText } from "@/i18n";
 import { isLocale, localePath } from "@/i18n/config";
 import { formatMoney } from "@/lib/money";
 import { getOrderForViewer, isOnlinePayment } from "@/lib/orders";
 import { site, vietQrImageUrl } from "@/lib/site";
-import type { OrderStatus } from "@/lib/types";
 
 // Personal data: never cache, never index.
 export const dynamic = "force-dynamic";
@@ -18,8 +19,6 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   const title = isLocale(lang) ? fmt(getDictionary(lang).order.title, { id }) : id;
   return { title, robots: { index: false, follow: false } };
 }
-
-const steps: OrderStatus[] = ["pending", "confirmed", "shipped", "delivered"];
 
 export default async function OrderPage({
   params,
@@ -41,7 +40,10 @@ export default async function OrderPage({
         <div className="empty-state card">
           <p className="empty-state__title">{t.order.notFound}</p>
           <p className="muted">{t.order.notFoundHint}</p>
-          <Link href={localePath(lang, "/")} className="btn btn--primary">
+          <Link href={localePath(lang, "/order")} className="btn btn--primary">
+            {t.nav.trackOrder}
+          </Link>
+          <Link href={localePath(lang, "/")} className="btn btn--ghost">
             {t.common.backHome}
           </Link>
         </div>
@@ -53,7 +55,6 @@ export default async function OrderPage({
     ? vietQrImageUrl(order.total, order.id)
     : undefined;
   const awaitingOnline = isOnlinePayment(order) && order.paymentStatus === "unpaid" && order.status !== "cancelled";
-  const current = steps.indexOf(order.status);
   const placed = new Intl.DateTimeFormat(lang === "vi" ? "vi-VN" : "en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -63,6 +64,7 @@ export default async function OrderPage({
   return (
     <div className="container page narrow order">
       {isNew && <OrderTracker order={{ id: order.id, total: order.total, lines: order.lines.map((l) => ({ id: l.productId, title: l.title, quantity: l.quantity, price: l.unitPrice })) }} />}
+      <RememberOrder order={{ id: order.id, token: order.accessToken, total: order.total, createdAt: order.createdAt }} />
 
       <header className="page__head">
         {isNew && <p className="eyebrow">✨ {t.order.thanks}</p>}
@@ -93,18 +95,7 @@ export default async function OrderPage({
           <span className="window__title">{t.order.status}</span>
         </div>
         <div className="card__body">
-          {order.status === "cancelled" ? (
-            <p className="alert alert--error">{t.order.statuses.cancelled}</p>
-          ) : (
-            <ol className="timeline">
-              {steps.map((step, i) => (
-                <li key={step} className={i <= current ? "is-done" : ""} aria-current={i === current ? "step" : undefined}>
-                  <span className="timeline__dot" aria-hidden="true" />
-                  {t.order.statuses[step]}
-                </li>
-              ))}
-            </ol>
-          )}
+          <OrderTimeline status={order.status} labels={t.order.statuses} />
           <p className="small">
             {t.order.payment}: <strong>{paymentMethodText(order.paymentMethod, t).label}</strong> ·{" "}
             <span className={order.paymentStatus === "paid" ? "text-success" : "muted"}>{t.order.paymentStatus[order.paymentStatus]}</span>

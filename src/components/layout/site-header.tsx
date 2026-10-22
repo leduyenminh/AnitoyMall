@@ -17,6 +17,7 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
     { href: href("/shop"), label: t.nav.shop },
     ...collectionLinks,
     { href: href("/about"), label: t.nav.about },
+    { href: href("/order"), label: t.nav.trackOrder },
     { href: href("/help"), label: t.nav.help },
   ];
   // The desktop bar keeps the two main collections; the rest are in the shop filters and footer.

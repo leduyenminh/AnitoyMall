@@ -684,6 +684,27 @@
   gap: 0.6rem;
   margin-top: 1rem;
 }
+.recent-orders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.recent-orders li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 1rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--border);
+}
+.recent-orders li:first-child {
+  border-top: 0;
+}
+.recent-orders li > :last-child {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  font-weight: 700;
+}
 .order-actions {
   display: flex;
   flex-wrap: wrap;

@@ -16,6 +16,7 @@ import { useServerQuote } from "../cart/use-quote";
 import { useI18n } from "../i18n";
 import { BagIcon, CashIcon } from "../icons";
 import { ProductImage } from "../product/product-image";
+import { recentOrdersStore } from "./recent-orders-store";
 
 type Field = "name" | "phone" | "email" | "province" | "ward" | "street";
 
@@ -135,11 +136,14 @@ export function CheckoutForm({ methods, vouchers }: { methods: PaymentMethod[]; 
       const json = (await res.json().catch(() => ({}))) as {
         id?: string;
         token?: string;
+        total?: number;
         error?: string;
         paymentUrl?: string;
         paymentError?: boolean;
       };
       if (res.ok && json.id && json.token) {
+        // Saved before any gateway redirect, so the order can be found even if the shopper never returns.
+        recentOrdersStore.remember({ id: json.id, token: json.token, total: json.total ?? 0, createdAt: new Date().toISOString() });
         // Keep showing progress (not an empty cart) while the next page loads.
         setPlaced(true);
         cart.clear();
