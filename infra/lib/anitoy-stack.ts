@@ -41,6 +41,8 @@ export interface AnitoyMallStackProps extends StackProps {
   alarmEmail?: string;
   sesFromEmail?: string;
   sellerEmail?: string;
+  /** Hours an unconfirmed COD / bank-transfer order holds stock before it is cancelled (app default 24). */
+  orderHoldHours?: string;
   /** NEXT_PUBLIC_* values passed to the Next.js build. */
   publicEnv: Record<string, string>;
 }
@@ -172,6 +174,7 @@ export class AnitoyMallStack extends Stack {
         // Resolved by CloudFormation at deploy time; requests without it are rejected.
         ORIGIN_VERIFY_SECRET: originSecret.secretValue.unsafeUnwrap(),
         ...(configuredSiteUrl ? { SITE_URL: configuredSiteUrl } : {}),
+        ...(props.orderHoldHours ? { ORDER_HOLD_HOURS: props.orderHoldHours } : {}),
       },
       logGroup: new logs.LogGroup(this, "StorefrontLogs", { retention: logRetention, removalPolicy: RemovalPolicy.DESTROY }),
     });
@@ -188,15 +191,17 @@ export class AnitoyMallStack extends Stack {
     paymentsSecret.grantRead(storefront);
 
     // ---------------------------------------------------------------- CDN
-    // Behind CloudFront the Host header is the Lambda URL; pass the public host along.
+    // Behind CloudFront the Host header is the Lambda URL; pass the public host along. Also pass the
+    // viewer's IP in a header the viewer cannot set (it is overwritten here), for rate limiting.
     const forwardHost = new cloudfront.Function(this, "ForwardHost", {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
-      comment: "Expose the viewer Host to the origin as x-forwarded-host",
+      comment: "Expose the viewer Host and IP to the origin",
       code: cloudfront.FunctionCode.fromInline(
         [
           "function handler(event) {",
           "  var request = event.request;",
           "  request.headers['x-forwarded-host'] = { value: request.headers.host.value };",
+          "  request.headers['x-viewer-ip'] = { value: event.viewer.ip };",
           "  return request;",
           "}",
         ].join("\n"),
@@ -308,6 +313,7 @@ export class AnitoyMallStack extends Stack {
       NODE_OPTIONS: "--enable-source-maps",
       ...(props.sesFromEmail ? { SES_FROM_EMAIL: props.sesFromEmail } : {}),
       ...(props.sellerEmail ? { SELLER_NOTIFY_EMAIL: props.sellerEmail } : {}),
+      ...(props.orderHoldHours ? { ORDER_HOLD_HOURS: props.orderHoldHours } : {}),
     };
     const worker = (id: string, entry: string, timeout: Duration, description: string) =>
       new nodejs.NodejsFunction(this, id, {
@@ -395,6 +401,19 @@ export class AnitoyMallStack extends Stack {
       paymentAnomalies.metric({ period: Duration.minutes(5), statistic: "Sum" }),
       1,
       "A gateway payment did not match its order (wrong amount, or paid after the order timed out): refund or re-open it in /admin.",
+    );
+    const rateLimited = new logs.MetricFilter(this, "RateLimited", {
+      logGroup: storefront.logGroup,
+      filterPattern: logs.FilterPattern.stringValue("$.event", "=", "rate_limited"),
+      metricNamespace: "AnitoyMall",
+      metricName: "RateLimited",
+      metricValue: "1",
+    });
+    alarm(
+      "RateLimitedAlarm",
+      rateLimited.metric({ period: Duration.minutes(5), statistic: "Sum" }),
+      20,
+      "Many checkout or order-lookup requests were rate limited: someone may be flooding the shop with orders. Check /admin for unwanted pending orders and cancel them.",
     );
 
     // ---------------------------------------------------------------- Outputs

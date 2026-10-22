@@ -138,6 +138,7 @@ export function CheckoutForm({ methods, vouchers }: { methods: PaymentMethod[]; 
         token?: string;
         total?: number;
         error?: string;
+        retryAfter?: number;
         paymentUrl?: string;
         paymentError?: boolean;
       };
@@ -161,7 +162,9 @@ export function CheckoutForm({ methods, vouchers }: { methods: PaymentMethod[]; 
           ? t.checkout.errors.stock
           : json.error === "voucher_invalid"
             ? t.checkout.errors.voucher
-            : t.checkout.errors.generic,
+            : json.error === "rate_limited"
+              ? fmt(t.checkout.errors.tooMany, { minutes: Math.max(1, Math.ceil((json.retryAfter ?? 60) / 60)) })
+              : t.checkout.errors.generic,
       );
       if (json.error === "quote_changed" || json.error === "voucher_invalid") refresh();
     } catch {

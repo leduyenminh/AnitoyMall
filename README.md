@@ -73,6 +73,8 @@ How an online payment flows:
 3. The shopper's browser returns to `/api/payments/{provider}/return`, which re-verifies the signature and lands on the order page with a success or failure message.
 4. Unpaid online orders are cancelled after 45 minutes by the sync worker, which also returns their stock.
 
+COD and VietQR orders also reserve stock, so they cannot hold it forever: the sync worker cancels any that are still pending and unpaid 24 hours after they were placed, unless you confirm them (or mark the transfer paid) in `/admin` first. The admin order list shows each order's deadline. Change the window with `ORDER_HOLD_HOURS` (local) or `-c orderHoldHours=48` (CDK).
+
 To enable gateways, fill in the `PaymentsSecretArn` secret (AWS) or `.env.local` (local) with the merchant keys from each provider; the keys are listed in `.env.example`. The defaults point at each provider's **sandbox**: switch the endpoints to production when you go live, and register the `PaymentIpnUrls` stack output with each gateway (VNPay needs its IPN URL set in the merchant portal; ZaloPay and MoMo receive it with every request).
 
 ```bash
@@ -232,4 +234,5 @@ Dockerfile              runner (any container host) and lambda targets
 - Payment notifications and returns are trusted only after their gateway signature verifies and the paid amount matches the order total.
 - TikTok webhooks are verified with HMAC-SHA256 over the raw body and de-duplicated by notification id.
 - TikTok product descriptions are reduced to plain text and never rendered as HTML.
-- To add WAF rate limiting in front of CloudFront, attach a web ACL created in us-east-1 to the distribution.
+- Placing orders and looking them up are rate limited per client IP (orders: 6 per 10 minutes and 30 per day; lookups: 10 per 10 minutes and 50 per day; an IPv6 /64 counts as one client). Counters live in DynamoDB, so every Lambda instance shares them. CloudFront passes the viewer IP in `x-viewer-ip`, overwriting anything the viewer sent. A spike in limited requests raises the `RateLimitedAlarm`.
+- For broader protection (bots spread over many IPs), attach a WAF web ACL created in us-east-1 to the distribution.

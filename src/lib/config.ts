@@ -22,6 +22,10 @@ export const config = {
     sesFromEmail: env.SES_FROM_EMAIL,
     sellerNotifyEmail: env.SELLER_NOTIFY_EMAIL,
   },
+  orders: {
+    /** Hours a COD or bank-transfer order holds stock before it is cancelled, unless the seller confirms it. */
+    holdHours: Number(env.ORDER_HOLD_HOURS) > 0 ? Number(env.ORDER_HOLD_HOURS) : 24,
+  },
   /** Shared secret CloudFront adds to every origin request; requests without it are rejected. */
   originVerifySecret: env.ORIGIN_VERIFY_SECRET,
   /** Local-development fallbacks; production reads these from Secrets Manager. */

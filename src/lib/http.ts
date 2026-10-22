@@ -4,10 +4,25 @@ import { checkAdmin } from "./admin-auth";
 export const json = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
-/** First hop in X-Forwarded-For (set by CloudFront) or nothing. */
+/**
+ * The shopper's IP. On AWS a CloudFront function sets x-viewer-ip and overwrites any value the
+ * viewer sent (the proxy only admits requests that came through CloudFront). Elsewhere (dev, a
+ * plain container) fall back to the first X-Forwarded-For hop, which the client can choose.
+ */
 export function clientIp(request: Request): string | undefined {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
+  return (
+    request.headers.get("x-viewer-ip")?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    undefined
+  );
 }
+
+/** 429 with Retry-After, for rate-limited public endpoints. */
+export const tooManyRequests = (retryAfter: number) =>
+  NextResponse.json(
+    { error: "rate_limited", retryAfter },
+    { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(retryAfter) } },
+  );
 
 /**
  * Browsers attach cached Basic-auth credentials to cross-site requests, so admin mutations also

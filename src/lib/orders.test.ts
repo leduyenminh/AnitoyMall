@@ -151,13 +151,53 @@ describe("online payments", () => {
     const cod = await orders.createOrder({ ...online(), paymentMethod: "cod" }, {});
     expect(await stockOf(FRIEREN)).toBe(before! - 2);
 
-    expect(await orders.expireUnpaidOrders(45)).toEqual([]); // too recent
+    expect(await orders.expireHeldOrders()).toEqual([]); // too recent
     const later = new Date(Date.now() + 46 * 60_000);
-    const expired = await orders.expireUnpaidOrders(45, later);
+    const expired = await orders.expireHeldOrders(later);
     expect(expired).toEqual([unpaid.id]);
     expect((await repo.getOrder(unpaid.id))?.status).toBe("cancelled");
     expect((await repo.getOrder(cod.id))?.status).toBe("pending");
     expect(await stockOf(FRIEREN)).toBe(before! - 1);
+  });
+});
+
+describe("order holds", () => {
+  const cod = () => ({ ...validInput(), items: [{ ...FERN, quantity: 1 }] });
+
+  it("releases stock held by COD orders the seller never confirmed", async () => {
+    const before = await stockOf(FERN);
+    const unconfirmed = await orders.createOrder(cod(), {});
+    const confirmed = await orders.createOrder(cod(), {});
+    await orders.applyOrderAction(confirmed.id, "confirm");
+    expect(await stockOf(FERN)).toBe(before! - 2);
+
+    expect(await orders.expireHeldOrders(new Date(Date.now() + 23 * 3600_000))).not.toContain(unconfirmed.id);
+    const expired = await orders.expireHeldOrders(new Date(Date.now() + 25 * 3600_000));
+    expect(expired).toContain(unconfirmed.id);
+    expect(expired).not.toContain(confirmed.id);
+
+    const cancelled = await repo.getOrder(unconfirmed.id);
+    expect(cancelled?.status).toBe("cancelled");
+    expect(cancelled?.history.at(-1)).toMatchObject({ status: "cancelled", note: "not_confirmed" });
+    expect((await repo.getOrder(confirmed.id))?.status).toBe("confirmed");
+
+    // Earlier tests' unconfirmed orders expired too; count what they returned.
+    const returnedByOthers = (await Promise.all(expired.filter((id) => id !== unconfirmed.id).map((id) => repo.getOrder(id))))
+      .flatMap((o) => o?.lines ?? [])
+      .filter((l) => l.skuId === FERN.skuId)
+      .reduce((sum, l) => sum + l.quantity, 0);
+    expect(await stockOf(FERN)).toBe(before! - 1 + returnedByOthers);
+  });
+
+  it("sets each payment method's deadline", () => {
+    const createdAt = "2026-10-22T08:00:00.000Z";
+    const pending = { status: "pending", paymentStatus: "unpaid", createdAt } as const;
+    expect(orders.holdExpiresAt({ ...pending, paymentMethod: "momo" })?.toISOString()).toBe("2026-10-22T08:45:00.000Z");
+    expect(orders.holdExpiresAt({ ...pending, paymentMethod: "cod" })?.toISOString()).toBe("2026-10-23T08:00:00.000Z");
+    expect(orders.holdExpiresAt({ ...pending, paymentMethod: "bank_transfer" }, 48)?.toISOString()).toBe("2026-10-24T08:00:00.000Z");
+    // A transfer the seller marked paid, or any confirmed order, keeps its stock.
+    expect(orders.holdExpiresAt({ ...pending, paymentStatus: "paid", paymentMethod: "bank_transfer" })).toBeUndefined();
+    expect(orders.holdExpiresAt({ ...pending, status: "confirmed", paymentMethod: "cod" })).toBeUndefined();
   });
 });
 
