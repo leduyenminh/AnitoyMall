@@ -19,6 +19,15 @@ next-env.d.ts
 cdk.out/
 infra/cdk.out/
 infra/cdk.context.json
+cdk-outputs.json
+
+# secrets prepared for `aws secretsmanager put-secret-value`
+payments.json
+
+# claude code: personal settings, hook caches, session worktrees
+.claude/settings.local.json
+.claude/.cache/
+.claude/worktrees/
 
 # misc
 .DS_Store
